@@ -1,0 +1,55 @@
+FROM althack/ros2:humble-full
+#FROM osrf/ros:jazzy-desktop-full
+
+ENV TZ=Europe/Amsterdam
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone 
+USER root
+
+# install zsh and oh-my-zsh
+RUN apt update && apt install -y zsh git
+RUN wget https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh && chmod +x install.sh && ls
+RUN ./install.sh
+RUN git clone https://github.com/zsh-users/zsh-autosuggestions.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions && \
+    apt install zsh-syntax-highlighting
+
+# configure zsh
+RUN echo 'export ZSH=$HOME/.oh-my-zsh' >> ~/.zshrc && \
+    echo 'ZSH_THEME="ys"' >> ~/.zshrc && \
+    echo 'plugins=(git zsh-autosuggestions)' >> ~/.zshrc && \
+    echo 'source $ZSH/oh-my-zsh.sh' >> ~/.zshrc && \
+    echo 'source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh' >> ~/.zshrc
+
+# install clang tools
+RUN wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh 18 all
+RUN update-alternatives --install /usr/bin/clangd clangd /usr/bin/clangd-18 100 \
+    && update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100 \
+    && update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100 \
+    && update-alternatives --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-18 100 \
+    && update-alternatives --install /usr/bin/run-clang-tidy run-clang-tidy /usr/bin/run-clang-tidy-18 100
+ENV CC=/usr/bin/clang-18
+ENV CXX=/usr/bin/clang++-18
+
+WORKDIR /workspace
+RUN echo "source /opt/ros/humble/setup.sh" >> ~/.zshrc 
+RUN apt update && apt install -y ros-humble-rmw-cyclonedds-cpp ros-humble-rosidl-generator-dds-idl
+WORKDIR /workspace/src
+RUN git clone https://github.com/willie013/go2_bringup.git && \
+    git clone https://github.com/Unitree-Go2-Robot/go2_description.git && \
+    git clone https://github.com/Unitree-Go2-Robot/go2_driver.git && \
+    git clone https://github.com/Unitree-Go2-Robot/go2_interfaces.git && \
+    git clone https://github.com/Unitree-Go2-Robot/go2_rviz.git && \
+    git clone https://github.com/Unitree-Go2-Robot/unitree_api.git && \
+    git clone https://github.com/Unitree-Go2-Robot/unitree_go.git
+RUN sudo apt update && sudo apt install ros-dev-tools -y
+#COPY /sogeti_sourcecode/ .
+WORKDIR /workspace
+#RUN sudo rosdep init
+RUN rosdep update
+RUN . /opt/ros/humble/setup.sh && rosdep install --from-paths src --ignore-src -r -y
+RUN . /opt/ros/humble/setup.sh && colcon build --symlink-install
+RUN echo "source /opt/ros/humble/setup.zsh" >> ~/.zshrc && \
+    echo "source /workspace/install/setup.zsh" >> ~/.zshrc
+# argcomplete for ros2 & colcon
+RUN echo 'eval "$(/usr/bin/register-python-argcomplete3 ros2)"' >> ~/.zshrc
+RUN echo 'eval "$(/usr/bin/register-python-argcomplete3 colcon)"' >> ~/.zshrc
+CMD [ "zsh" ]
