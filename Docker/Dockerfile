@@ -15,8 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sudo \
     software-properties-common \
     wget \
-    python3-rosdep \
-    && rm -rf /var/lib/apt/lists/*
+    python3-rosdep 
 
 RUN rosdep init || echo "rosdep already initialized"
 
@@ -48,8 +47,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tree \
     ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
     ros-${ROS_DISTRO}-rosidl-generator-dds-idl \
-    ros-dev-tools \
-    && rm -rf /var/lib/apt/lists/*
+    ros-dev-tools 
 
 # Install LLVM 18 (for C++ compilation)
 RUN wget --progress=dot:giga https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh 18 all
@@ -89,7 +87,7 @@ FROM dev AS go2
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Copy Go2 Robot-specific ROS2 packages
-COPY ./packages /workspace/src/
+COPY ../packages /workspace/src/
 
 # Build the ROS2 workspace
 WORKDIR /workspace
@@ -97,8 +95,7 @@ WORKDIR /workspace
 # Update package lists and install dependencies
 RUN apt-get update \
     && . /opt/ros/${ROS_DISTRO}/setup.sh \
-    && rosdep install --from-paths src --ignore-src -r -y \
-    && rm -rf /var/lib/apt/lists/*
+    && rosdep install --from-paths src --ignore-src -r -y
 
 # Build workspace with debug symbols for development
 RUN . /opt/ros/${ROS_DISTRO}/setup.sh \

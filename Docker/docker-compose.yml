@@ -2,16 +2,16 @@ x-common: &common
   volumes: 
     #- ..:/workspace:cached
     - /tmp/.X11-unix:/tmp/.X11-unix:rw
-    - /mnt/wslg:/mnt/wslg
-    - /root/.gazebo/models/:/root/.gazebo/models/
-    - /var/run/docker.sock:/var/run/docker.sock 
+    #- /mnt/wslg:/mnt/wslg
+    #- /root/.gazebo/models/:/root/.gazebo/models/
+    #- /var/run/docker.sock:/var/run/docker.sock 
     - $HOME/.Xauthority:/tmp/.Xauthority:rw
   environment:
     - DISPLAY=${DISPLAY}
     - XAUTHORITY=/tmp/.Xauthority
     - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
     - CYCLONEDDS_URI=<CycloneDDS><Domain><General><Interfaces>
-                          <NetworkInterface name="wlp9s0" priority="default" multicast="default" />
+                          <NetworkInterface name="enp0s1" priority="default" multicast="default" />
                       </Interfaces></General></Domain></CycloneDDS>
   cap_add:
     - SYS_PTRACE  
@@ -24,7 +24,7 @@ services:
     <<: *common
     container_name: ros2-jazzy-dev
     build:
-      context: .
+      context: ../
       dockerfile: Dockerfile
       target: dev
 
@@ -32,6 +32,6 @@ services:
     <<: *common
     container_name: ros2-go2-dev
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../
+      dockerfile: ./Docker/Dockerfile
       target: go2
