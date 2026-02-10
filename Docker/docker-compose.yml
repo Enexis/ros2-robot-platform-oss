@@ -1,29 +1,39 @@
-name: go2pro-enexis-ros2-desktop
+name: ros2-robot-platform
+
+x-common: &common
+  volumes: 
+    #- ..:/workspace:cached
+    - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    - /mnt/wslg:/mnt/wslg
+    - /root/.gazebo/models/:/root/.gazebo/models/
+    - /var/run/docker.sock:/var/run/docker.sock 
+    - $HOME/.Xauthority:/tmp/.Xauthority:rw
+  environment:
+    - DISPLAY=${DISPLAY}
+    - XAUTHORITY=/tmp/.Xauthority
+    - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+    - CYCLONEDDS_URI=<CycloneDDS><Domain><General><Interfaces>
+                          <NetworkInterface name="wlp9s0" priority="default" multicast="default" />
+                      </Interfaces></General></Domain></CycloneDDS>
+  cap_add:
+    - SYS_PTRACE  
+  command: /bin/sh -c "while sleep 1000; do :; done"
+  privileged: true
+  network_mode: "host"
 
 services: 
-  devcontainer-humble:
-    volumes: 
-      #- ..:/workspace:cached
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - /mnt/wslg:/mnt/wslg
-      - /root/.gazebo/models/:/root/.gazebo/models/
-      - /var/run/docker.sock:/var/run/docker.sock 
-      - $HOME/.Xauthority:/tmp/.Xauthority:rw
-    environment:
-      - DISPLAY=${DISPLAY}
-      - XAUTHORITY=/tmp/.Xauthority
-      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-      - CYCLONEDDS_URI=<CycloneDDS><Domain><General><Interfaces>
-                            <NetworkInterface name="wlp9s0" priority="default" multicast="default" />
-                        </Interfaces></General></Domain></CycloneDDS>
-    cap_add:
-      - SYS_PTRACE  
-    command: /bin/sh -c "while sleep 1000; do :; done"
- 
+  ros2-dev:
+    <<: *common
+    container_name: ros2-jazzy-dev
     build:
       context: .
-      dockerfile: Dockerfile-humble
-    # image: ros2-humble-dev:latest
-    
-    privileged: true
-    network_mode: "host"
+      dockerfile: Dockerfile
+      target: dev
+
+  ros2-go2:
+    <<: *common
+    container_name: ros2-go2-dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: go2
