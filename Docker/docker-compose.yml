@@ -1,5 +1,3 @@
-name: ros2-robot-platform
-
 x-common: &common
   volumes: 
     #- ..:/workspace:cached
