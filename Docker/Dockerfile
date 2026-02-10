@@ -22,11 +22,6 @@ RUN rosdep init || echo "rosdep already initialized"
 
 ENV DEBIAN_FRONTEND=
 
-# Setup entrypoint
-COPY ./ros_entrypoint.sh /
-ENTRYPOINT ["/ros_entrypoint.sh"]
-CMD ["bash"]
-
 ###########################################
 # Dev image with development tools
 ###########################################
@@ -47,7 +42,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     valgrind \
     clang-format \
     clang-tidy \
-    nvim \
+    vim \
     nano \
     htop \
     tree \
@@ -71,15 +66,20 @@ ENV DEBIAN_FRONTEND=
 # Setup workspace directory
 WORKDIR /workspace
 
-# Setup bash environment with autocompletion
-RUN echo "if [ -f /opt/ros/${ROS_DISTRO}/setup.bash ]; then source /opt/ros/${ROS_DISTRO}/setup.bash; fi" >> ~/.bashrc \
-    && echo "if [ -f /workspace/install/setup.bash ]; then source /workspace/install/setup.bash; fi" >> ~/.bashrc \
-    && echo "if [ -f /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash ]; then source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash; fi" >> ~/.bashrc \
-    && echo "alias cb='colcon build --symlink-install'" >> ~/.bashrc \
-    && echo "alias cbs='colcon build --symlink-install --packages-select'" >> ~/.bashrc \
-    && echo "alias ct='colcon test'" >> ~/.bashrc \
-    && echo "alias ctr='colcon test-result --verbose'" >> ~/.bashrc \
-    && echo "alias sw='source /workspace/install/setup.bash'" >> ~/.bashrc
+# Setup bash environment
+RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> ~/.bashrc && \
+    echo "source /workspace/install/setup.bash" >> ~/.bashrc
+
+# Add argcomplete for ROS2 and colcon
+RUN echo "eval \"$(/usr/bin/register-python-argcomplete3 ros2)\"" >> ~/.bashrc \
+    && echo "eval \"$(/usr/bin/register-python-argcomplete3 colcon)\"" >> ~/.bashrc
+
+# Add helpful aliases for development
+RUN echo "alias cb='colcon build --symlink-install'" >> ~/.bashrc && \
+    echo "alias cbs='colcon build --symlink-install --packages-select'" >> ~/.bashrc && \
+    echo "alias ct='colcon test'" >> ~/.bashrc && \
+    echo "alias ctr='colcon test-result --verbose'" >> ~/.bashrc && \
+    echo "alias resource='source /opt/ros/\${ROS_DISTRO}/setup.bash && source /workspace/install/setup.bash'" >> ~/.bashrc
 
 ###########################################
 # Go2 robot image with packages
