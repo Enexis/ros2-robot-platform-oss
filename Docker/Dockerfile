@@ -88,15 +88,8 @@ FROM dev AS go2
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Download Go2 Robot-specific ROS2 packages
-WORKDIR /workspace/src
-RUN git clone https://github.com/willie013/go2_bringup.git && \
-    git clone https://github.com/Unitree-Go2-Robot/go2_description.git && \
-    git clone https://github.com/Unitree-Go2-Robot/go2_driver.git && \
-    git clone https://github.com/Unitree-Go2-Robot/go2_interfaces.git && \
-    git clone https://github.com/Unitree-Go2-Robot/go2_rviz.git && \
-    git clone https://github.com/Unitree-Go2-Robot/unitree_api.git && \
-    git clone https://github.com/Unitree-Go2-Robot/unitree_go.git
+# Copy Go2 Robot-specific ROS2 packages
+COPY ./packages /workspace/src/
 
 # Build the ROS2 workspace
 WORKDIR /workspace
