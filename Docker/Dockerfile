@@ -89,6 +89,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Copy Go2 Robot-specific ROS2 packages
 COPY ../packages /workspace/src/
 
+# Copy CycloneDDS config files
+COPY ../cyclonedds /workspace/cyclonedds
+
 # Build the ROS2 workspace
 WORKDIR /workspace
 

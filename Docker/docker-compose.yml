@@ -10,11 +10,9 @@ x-common: &common
     - DISPLAY=${DISPLAY}
     - XAUTHORITY=/tmp/.Xauthority
     - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-    - CYCLONEDDS_URI=<CycloneDDS><Domain><General><Interfaces>
-                          <NetworkInterface name="wlp9s0" priority="default" multicast="default" />
-                      </Interfaces></General></Domain></CycloneDDS>
+    - CYCLONEDDS_URI=${CYCLONEDDS_URI}
   cap_add:
-    - SYS_PTRACE  
+    - SYS_PTRACE  ${CYCLONEDDS_URI}
   command: /bin/sh -c "while sleep 1000; do :; done"
   privileged: true
   network_mode: "host"
