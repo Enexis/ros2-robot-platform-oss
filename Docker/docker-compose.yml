@@ -12,7 +12,7 @@ x-common: &common
     - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
     - CYCLONEDDS_URI=${CYCLONEDDS_URI}
   cap_add:
-    - SYS_PTRACE  ${CYCLONEDDS_URI}
+    - SYS_PTRACE
   command: /bin/sh -c "while sleep 1000; do :; done"
   privileged: true
   network_mode: "host"
