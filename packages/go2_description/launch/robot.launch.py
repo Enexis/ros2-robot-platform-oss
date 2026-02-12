@@ -49,7 +49,7 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             'use_sim_time',
-            default_value='True',
+            default_value='False',
             description='Use simulation/Gazebo clock if true',
         )
     )
@@ -79,7 +79,7 @@ def generate_launch_description():
         parameters=[{
             'use_sim_time': use_sim_time,
             'robot_description': robot_description_param,
-            'publish_frequency': 100.0,
+            'publish_frequency': 10.0,
             'frame_prefix': '',
             }],
         )
