@@ -45,11 +45,11 @@ def generate_launch_description():
         name='pointcloud_to_laserscan',
         namespace='',
         output='screen',
-        remappings=[('/cloud_in', '/pointcloud')],
-        parameters=[{
-                'target_frame': 'radar',
-                'transform_tolerance': 0.01,
-            }],
+        remappings=[
+            ("cloud_in", "pointcloud"),
+            ("scan", "scan"),
+        ],
+        parameters=[{"target_frame": "base_link", "max_height": 0.5}],
     )
 
     ld = LaunchDescription()

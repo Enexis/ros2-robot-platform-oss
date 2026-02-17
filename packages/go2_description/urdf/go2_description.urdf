@@ -1206,7 +1206,7 @@ Stephen Brawner (brawner@gmail.com)
     type="fixed">
     <origin
       xyz="0.28945 0 -0.046825"
-      rpy="0 2.8782 0" />
+      rpy="-2.913 -0.132 -1.057" />
     <parent
       link="base_link" />
     <child
