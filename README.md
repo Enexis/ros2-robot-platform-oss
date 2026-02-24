@@ -1,3 +1,199 @@
+# ROS 2 Go2 Robot Platform 
+
+ROS 2 Jazzy workspace for running Unitree Go2 in a modular way:
+- robot model and TF (`go2_description`)
+- runtime driver bridge (`go2_driver`)
+- launch orchestration (`go2_bringup`)
+- RViz visualization (`go2_rviz`)
+- control service definitions (`go2_interfaces`)
+
+The repository also includes Docker support and CycloneDDS network presets.
+
+---
+
+## Safety
+
+This project can command a real robot.
+- Use an open, safe test area.
+- Keep an emergency stop strategy ready.
+- Start with low speeds and conservative commands.
+- Verify command topics/services before enabling actuation.
+
+---
+
+## Repository Layout
+
+```text
+.
+├── cyclonedds/                  # CycloneDDS interface profiles
+├── Docker/                      # Dockerfile and compose setup
+└── packages/
+		├── go2_bringup/             # Top-level bringup launch
+		├── go2_description/         # URDF/Xacro, robot_state_publisher launch
+		├── go2_driver/              # ROS 2 component driver bridge
+		├── go2_interfaces/          # Service definitions
+		├── go2_rviz/                # RViz launch + config
+		├── unitree_api/             # Unitree API messages
+		└── unitree_go/              # Unitree robot messages
+```
+
+---
+
+## Supported Environment
+
+- ROS 2: **Jazzy**
+- Ubuntu: **24.04** (native, Docker, or WSL2 Ubuntu)
+- DDS middleware: **CycloneDDS** (`rmw_cyclonedds_cpp`)
+
+> The project is Linux-first. On Windows, use WSL2 (see Appendix A).
+
+---
+
+## Quick Start (Docker Compose)
+
+This project is intended to be started with Docker Compose. The `ros2-go2` image build:
+- installs ROS package dependencies with `rosdep`
+- builds the workspace with `colcon`
+
+### 1) Clone
+
+```bash
+git clone https://github.com/<your-org-or-user>/ros2-robot-platform-oss.git
+cd ros2-robot-platform-oss
+```
+
+### 2) Configure DDS profile in `Docker/.env`
+
+Docker Compose reads `CYCLONEDDS_URI` from `Docker/.env`.
+
+Edit `Docker/.env` and select the profile for your machine:
+
+```dotenv
+# Laptop development machine
+CYCLONEDDS_URI=file:///workspace/cyclonedds/cyclonedds_laptop.xml
+
+# Jetson on the robot (alternative)
+# CYCLONEDDS_URI=file:///workspace/cyclonedds/cyclonedds_jetson.xml
+```
+
+For Jetson, set interface names in `cyclonedds/cyclonedds_jetson.xml` to match the device:
+- `en*` = Ethernet interface connected to the Unitree Go2 embedded computer
+- `wl*` = wireless interface on the Jetson
+
+For laptop usage, set the interface names in `cyclonedds/cyclonedds_laptop.xml` to match your host network adapters.
+
+### 3) Build image and start container
+
+```bash
+cd Docker
+docker compose up -d --build ros2-go2
+```
+
+### 4) Open a shell in the running container
+
+```bash
+docker exec -it ros2-go2-dev bash
+```
+
+### 5) Launch bringup
+
+```bash
+ros2 launch go2_bringup go2.launch.py
+```
+
+Notes:
+- Compose uses `network_mode: host`.
+- GUI forwarding is preconfigured for WSLg/X11 mounts in `Docker/docker-compose.yml`.
+
+---
+
+## Main Launch Files
+
+- `go2_bringup/launch/go2.launch.py`
+	- launches `go2_description`, `go2_driver`, optional `go2_rviz`
+	- args: `rviz` (`True/False`), `lidar` and `realsense` (reserved)
+- `go2_description/launch/robot.launch.py`
+	- publishes `robot_state_publisher` from URDF/Xacro
+- `go2_driver/launch/go2_driver.launch.py`
+	- starts `go2_driver` component container
+	- runs `pointcloud_to_laserscan`
+- `go2_rviz/launch/rviz.launch.py`
+	- starts RViz with packaged config
+
+---
+
+## ROS Interfaces
+
+### Core Topics
+
+Published by `go2_driver`:
+- `/pointcloud` (`sensor_msgs/msg/PointCloud2`)
+- `/joint_states` (`sensor_msgs/msg/JointState`)
+- `/odom` (`nav_msgs/msg/Odometry`)
+- `/imu` (`unitree_go/msg/IMUState`)
+- `/api/sport/request` (`unitree_api/msg/Request`)
+
+Subscribed by `go2_driver`:
+- `/utlidar/cloud` (`sensor_msgs/msg/PointCloud2`)
+- `/utlidar/robot_pose` (`geometry_msgs/msg/PoseStamped`)
+- `/joy` (`sensor_msgs/msg/Joy`)
+- `/lowstate` (`unitree_go/msg/LowState`)
+- `/cmd_vel` (`geometry_msgs/msg/Twist`)
+
+### Services (from `go2_interfaces`)
+
+Exposed by `go2_driver`:
+- `/body_height`
+- `/continuous_gait`
+- `/euler`
+- `/foot_raise_height`
+- `/mode`
+- `/pose`
+- `/speed_level`
+- `/switch_gait`
+- `/switch_joystick`
+
+Example calls:
+
+```bash
+# Set mode
+ros2 service call /mode go2_interfaces/srv/Mode "{mode: stand_up}"
+
+# Set velocity command
+ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.1}}" -r 10
+
+# Set gait (0..4)
+ros2 service call /switch_gait go2_interfaces/srv/SwitchGait "{d: 1}"
+```
+
+---
+
+## Development Commands
+
+For day-to-day development inside the container, this workspace uses short aliases for common `colcon` and environment commands.
+
+- `resource`: source ROS 2 and workspace setup files in one command.
+- `cb`: build all packages with symlink install.
+- `cbs`: build selected packages only.
+- `ct`: run tests.
+- `ctr`: print verbose test results.
+
+### No discovery across machines
+
+- Ensure both machines use the same DDS implementation (`rmw_cyclonedds_cpp`).
+- Check `CYCLONEDDS_URI` points to a valid XML file.
+- Verify XML network interface names match actual interfaces.
+- Open UDP ports used by DDS discovery (commonly in `7400-7600` range).
+
+Windows firewall example (PowerShell as Administrator):
+
+```powershell
+New-NetFirewallRule -DisplayName "ROS2 UDP 7400-7600" -Direction Inbound -Action Allow -Protocol UDP -LocalPort 7400-7600
+New-NetFirewallRule -DisplayName "ROS2 UDP 7400-7600 Outbound" -Direction Outbound -Action Allow -Protocol UDP -LocalPort 7400-7600
+```
+
+## Appendix A: WSL2 Setup
+
 # A guide to configuring WSL2 for using ROS2 on Windows 11
 
 ## Install Windows Terminal
