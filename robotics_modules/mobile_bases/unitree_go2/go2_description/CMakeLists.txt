@@ -7,7 +7,7 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 
-install(DIRECTORY launch urdf dae config
+install(DIRECTORY launch xacro meshes config
   DESTINATION share/${PROJECT_NAME}
 )
 
