@@ -23,7 +23,7 @@ services:
     container_name: ros2-jazzy-dev
     build:
       context: ../
-      dockerfile: Dockerfile
+      dockerfile: ./Docker/Dockerfile
       target: dev
 
   ros2-go2:

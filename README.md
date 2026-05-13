@@ -1,13 +1,68 @@
-# ROS 2 Go2 Robot Platform 
+# ROS 2 Robot Platform OSS
 
-ROS 2 Jazzy workspace for running Unitree Go2 in a modular way:
-- robot model and TF (`go2_description`)
-- runtime driver bridge (`go2_driver`)
-- launch orchestration (`go2_bringup`)
-- RViz visualization (`go2_rviz`)
-- control service definitions (`go2_interfaces`)
+ROS 2 Jazzy workspace for ROS 2 robot platforms in a modular way. Below is the folder structure and a short description of each (sub)folder.
 
-The repository also includes Docker support and CycloneDDS network presets.
+Project structure
+
+```text
+├─ architecture/
+│  ├─ robot_platform/
+│  └─ <specific platform architecture>
+├─ cyclonedds
+├─ Docker/
+│  ├─ base_dev/
+│  ├─ visualization/
+│  └─ <specific platform images>
+├─ robotics_modules/
+│  ├─ application_control/
+│  ├─ mobile_bases/
+│  ├─ platform_kits/
+│  ├─ robotic_arms/
+│  ├─ ros2_control/
+│  ├─ sensors/
+│  └─ visualization/
+└─ utilities/
+   └─ osm2sdf/
+```
+
+Descriptions
+
+- `architecture/`
+  - High-level system architecture and design artifacts (diagrams, specs).
+  - `robot_platform/`: Generic robot platform architecture and shared patterns.
+  - Should be extended with platform specific architectures
+
+- `cyclonedds`
+  - Configuration of Cyclone DDS (ROS 2 middleware) network.
+
+- `Docker/`
+  - Docker build contexts and assets for development and runtime images.
+  - `base_dev/`: Base and development image
+  - `visualization/`: Image for gazebo and visualization tools (e.g., RViz, web dashboards).
+  - Shoud be extended with images and context tailored to the specific robot platforms.
+
+- `.env`
+  - Environment variable defaults used by Docker Compose.
+
+- `docker-compose.common.yml`
+  - Shared Compose settings included by environment-specific Compose files.
+
+- `entrypoint.sh`
+  - Container entrypoint script to source ROS 2 in case of running a non-interactive container.
+
+- `robotics_modules/`
+  - Source tree for ROS 2 packages and domain modules.
+  - `application_control/`: High-level custom behavior, mission logic, and orchestrators.
+  - `mobile_bases/`: Drivers, bring-up and adapters for mobile bases.
+  - `platform_kits/`: Bundled launch/config sets for specific platform configurations.
+  - `robotic_arms/`: Manipulator drivers, kinematics, and controllers.
+  - `ros2_control/`: `ros2_control` and friends (`Nav2`/`Moveit2`) hardware interfaces, controller configs, and launch files.
+  - `sensors/`: Sensor drivers, calibration, and message adapters.
+  - `visualization/`: Gazebo, RViz configs, visualization nodes, and display resources for modules.
+
+- `utilities/`
+  - Helper tools and scripts used across modules and CI.
+  - `osm2sdf/`: Tools to convert OpenStreetMap data to SDF for simulation environments.
 
 ---
 
