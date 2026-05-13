@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from launch import LaunchDescription
+from launch import LaunchDescription, LaunchContext
+from launch.substitutions import LaunchConfiguration
+from launch.actions import DeclareLaunchArgument
 from launch_ros.actions import ComposableNodeContainer, Node
 from launch_ros.descriptions import ComposableNode
 
@@ -21,18 +23,25 @@ def generate_launch_description():
 
     composable_nodes = []
 
+    namespace = LaunchConfiguration("namespace")
+    declare_namespace = DeclareLaunchArgument(
+            'namespace',
+            default_value='',
+            description='namespace to be added to the robot description.',
+        )
+    
+
     composable_node = ComposableNode(
         package='go2_driver',
         plugin='go2_driver::Go2Driver',
         name='go2_driver',
-        namespace='',
-
+        namespace=namespace,
     )
     composable_nodes.append(composable_node)
 
     container = ComposableNodeContainer(
         name='go2_container',
-        namespace='',
+        namespace=namespace,
         package='rclcpp_components',
         executable='component_container',
         composable_node_descriptions=composable_nodes,
@@ -43,7 +52,7 @@ def generate_launch_description():
         package='pointcloud_to_laserscan',
         executable='pointcloud_to_laserscan_node',
         name='pointcloud_to_laserscan',
-        namespace='',
+        namespace=namespace,
         output='screen',
         remappings=[
             ("cloud_in", "pointcloud"),
@@ -53,6 +62,7 @@ def generate_launch_description():
     )
 
     ld = LaunchDescription()
+    ld.add_action(declare_namespace)
     ld.add_action(container)
     ld.add_action(pointclod_to_laserscan_cmd)
 
