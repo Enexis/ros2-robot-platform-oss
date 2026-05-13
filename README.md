@@ -2,7 +2,7 @@
 
 ROS 2 Jazzy workspace for ROS 2 robot platforms in a modular way. Below is the folder structure and a short description of each (sub)folder.
 
-Project structure
+## Repository Layout
 
 ```text
 ├─ architecture/
@@ -76,24 +76,6 @@ This project can command a real robot.
 
 ---
 
-## Repository Layout
-
-```text
-.
-├── cyclonedds/                  # CycloneDDS interface profiles
-├── Docker/                      # Dockerfile and compose setup
-└── packages/
-		├── go2_bringup/             # Top-level bringup launch
-		├── go2_description/         # URDF/Xacro, robot_state_publisher launch
-		├── go2_driver/              # ROS 2 component driver bridge
-		├── go2_interfaces/          # Service definitions
-		├── go2_rviz/                # RViz launch + config
-		├── unitree_api/             # Unitree API messages
-		└── unitree_go/              # Unitree robot messages
-```
-
----
-
 ## Supported Environment
 
 - ROS 2: **Jazzy**
@@ -141,13 +123,13 @@ For laptop usage, set the interface names in `cyclonedds/cyclonedds_laptop.xml` 
 
 ```bash
 cd Docker
-docker compose up -d --build ros2-go2
+docker compose up -d --build enexis_dev
 ```
 
 ### 4) Open a shell in the running container
 
 ```bash
-docker exec -it ros2-go2-dev bash
+docker exec -it enexis_dev bash
 ```
 
 ### 5) Launch bringup
