@@ -6,20 +6,37 @@ FROM ros:jazzy AS base
 ENV DEBIAN_FRONTEND=noninteractive
 ARG ROS_DISTRO=jazzy
 ENV ROS_DISTRO=${ROS_DISTRO}
+ENV WORKDIR=workspace
+ARG COLCON_BUILD_SEQUENTIAL
 
 # Install common programs
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    iputils-ping \
     gnupg2 \
     lsb-release \
     sudo \
     software-properties-common \
     wget \
-    python3-rosdep 
+    python3-rosdep \
+    ros-$ROS_DISTRO-rmw-cyclonedds-cpp \
+    ros-$ROS_DISTRO-rosidl-generator-dds-idl 
 
 RUN rosdep init || echo "rosdep already initialized"
+RUN rosdep update
+
+# Setup bash environment
+RUN echo "\
+if [ -f \"/opt/ros/${ROS_DISTRO}/setup.bash\" ]; then\n\
+    source \"/opt/ros/${ROS_DISTRO}/setup.bash\"\n\
+fi\n\
+if [ -f \"/${WORKDIR}/install/setup.bash\" ]; then\n\
+    source \"/${WORKDIR}/install/setup.bash\"\n\
+fi" >> /root/.bashrc
+
 
 ENV DEBIAN_FRONTEND=
+COPY ./Docker/entrypoint.sh /entrypoint.sh
 
 ###########################################
 # Dev image with development tools
@@ -45,9 +62,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nano \
     htop \
     tree \
-    ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
-    ros-${ROS_DISTRO}-rosidl-generator-dds-idl \
-    ros-dev-tools 
+    ros-dev-tools
+
+# Install ROS2 tools and gazebo
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ros-$ROS_DISTRO-rqt* \
+    ros-$ROS_DISTRO-teleop-twist-keyboard \
+    ros-$ROS_DISTRO-ros-gz \
+    ros-$ROS_DISTRO-gz-ros2-control
 
 # Install LLVM 18 (for C++ compilation)
 RUN wget --progress=dot:giga https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh 18 all
@@ -62,11 +84,7 @@ ENV CXX=/usr/bin/clang++-18
 ENV DEBIAN_FRONTEND=
 
 # Setup workspace directory
-WORKDIR /workspace
-
-# Setup bash environment
-RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> ~/.bashrc && \
-    echo "source /workspace/install/setup.bash" >> ~/.bashrc
+WORKDIR /$WORKDIR
 
 # Add argcomplete for ROS2 and colcon
 RUN echo "eval \"$(/usr/bin/register-python-argcomplete3 ros2)\"" >> ~/.bashrc \
@@ -79,29 +97,17 @@ RUN echo "alias cb='colcon build --symlink-install'" >> ~/.bashrc && \
     echo "alias ctr='colcon test-result --verbose'" >> ~/.bashrc && \
     echo "alias resource='source /opt/ros/\${ROS_DISTRO}/setup.bash && source /workspace/install/setup.bash'" >> ~/.bashrc
 
-###########################################
-# Go2 robot image with packages
-###########################################
-FROM dev AS go2
+# The workspace will be attached as a volume but we copy the source files here to speed up the initial build when using docker-compose
+COPY robotics_modules /$WORKDIR/src/
+COPY utilities /$WORKDIR/utilities/
 
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Copy Go2 Robot-specific ROS2 packages
-COPY ../robotics_modules /workspace/src/
-
-# Copy CycloneDDS config files
-COPY ../cyclonedds /workspace/cyclonedds
-
-# Build the ROS2 workspace
-WORKDIR /workspace
-
-# Update package lists and install dependencies
+# Update package lists and install dependencies   
+# Build workspace with debug symbols for development
 RUN apt-get update \
     && . /opt/ros/${ROS_DISTRO}/setup.sh \
-    && rosdep install --from-paths src --ignore-src -r -y
+    && rosdep install --from-paths src --ignore-src -r -y \
+    && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo 
 
-# Build workspace with debug symbols for development
-RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
-    && colcon build --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo
+RUN echo 'export PYTHONPATH=$PYTHONPATH:/workspace' >> ~/.bashrc
 
-ENV DEBIAN_FRONTEND=
+ENTRYPOINT ["/entrypoint.sh"]

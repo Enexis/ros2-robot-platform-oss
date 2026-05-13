@@ -1,0 +1,40 @@
+services: 
+  ros2-base:
+    extends:
+      service: common
+      file: ../docker-compose.common.yml
+    container_name: enexis_base
+    image: enexis/base:latest
+    build:
+      context: ../../
+      dockerfile: Docker/base_dev/Dockerfile
+      target: base
+
+  enexis-dev:
+    extends:
+      service: common
+      file: ../docker-compose.common.yml
+    container_name: enexis_dev
+    image: enexis/dev:latest
+    build:
+      context: ../../
+      dockerfile: Docker/base_dev/Dockerfile
+      target: dev
+    volumes: 
+      - ../../robotics_modules:/workspace/src
+      - ../../cyclonedds:/workspace/cyclonedds
+
+      # Share X11 socket to allow GUI applications from the container
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # Share X11 auth file so GUI works with the host X server
+      - $HOME/.Xauthority:/tmp/.Xauthority:rw
+      # Map full /dev to allow access to hardware (e.g. sensors, serial ports)
+      - /dev:/dev
+    command:
+      - /bin/bash
+      - -c
+      # 1) Install ROS dependencies
+      # 2) Build the workspace with colcon
+      # 3) Keep the container running with 'tail -f /dev/null'
+      - rosdep install --from-paths src --ignore-src -r -y && colcon build --symlink-install && tail -f /dev/null
+      
