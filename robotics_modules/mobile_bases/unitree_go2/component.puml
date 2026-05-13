@@ -1,0 +1,24 @@
+@startuml C4_Component
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml 
+
+Person(user, "User", "Operator")
+
+Component(bringup, "go2_bringup", "Launch system")
+Container(description, "go2_description", "Robot description")
+Container(driver, "go2_driver", "Hardware driver that translates ros2 commands to go2 specific commands")
+Container(interfaces, "go2_interfaces", "Driver interfaces")
+Container(unitree_api, "unitree_api", "Generic API")
+Container(unitree_go, "unitree_go", "Go platform API")
+Container(controller, "unitree_go2_controller", "CHAMP Simulation Hardware Driver")
+Container(msgs, "unitree_go2_msgs", "Custom messages")
+
+Rel(user, bringup, "Launches")
+Rel(bringup, driver, "Uses")
+Rel(bringup, controller, "Uses")
+Rel(bringup, description, "Uses")
+Rel(driver, interfaces, "Implements")
+Rel(driver, unitree_go, "Depends on")
+Rel(unitree_go, unitree_api, "Extends")
+Rel(controller, msgs, "Uses")
+
+@enduml
