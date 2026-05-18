@@ -1,0 +1,121 @@
+@startuml ContextDiagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+LAYOUT_LEFT_RIGHT()
+
+title Context - Wie gebruikt het systeem en welke externe systemen zijn er?
+
+Person(operator, "Test/demo Operator", "Operates a robot in a test field (teleoperation, monitoring).")
+Person(dev, "Robotics Developer", "Develops, simulates, and tests ROS 2 components.")
+
+System(UI, "User Interface", "UI for teleoperation and monitoring.")
+System(platform, "ROS2 Platform", "Modular robotics platform for rapid and repeatable validation of use cases.")
+
+System_Ext(ci, "CI/CD & Repository", "Git, issue tracking on GitHub")
+System_Ext(rtk, "RTK Caster", "RTK-corrections (NTRIP/caster)")
+System_Ext(data, "Data Storage", "Cloud storage for logs and datasets")
+Rel(operator, UI, "Uses (Joystick/Web UI)")
+    Rel(UI, platform, "Operates the robot, visualizes data, and provides feedback")
+    Rel(dev, platform, "Develops, uses, and monitors [SSH keys, ROS 2 DDS, and RViz]")
+
+Rel(dev, ci, "Push/Pull code & pipelines")
+Rel(platform, ci, "Get artefacts/configs (Git/Packages)")
+Rel(rtk, platform, "Optionally used for absolute positioning [NTRIP]")
+Rel(UI, data, "Data retrieval and storage")
+
+SHOW_LEGEND()
+@enduml
+
+
+@startuml ContainerDiagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_LEFT_RIGHT()
+title Containers – Welke deployable onderdelen (op de robot en daarbuiten) zijn er en hoe praten ze?
+
+' Personen
+Person(operator, "Test/demo Operator", "Bedient een robot in een testopstelling (teleoperatie, monitoring).")
+System(UI, "User Interface", "UI for teleoperation and monitoring.")
+
+System_Ext(rtk, "RTK Caster", "RTK-corrections (NTRIP/caster)")
+
+System_Boundary(rsp, "ROS2 Platform") {
+
+  Container(net, "Netwerkmodule", "Wi‑Fi/LTE/5G + Ethernet", "Netwerkconnectiviteit, NTP, NTRIP-doorvoer.")
+  Container(oc, "Onboard Computing Platform", "Ubuntu + ROS 2 (DDS)", "Host de runtime (ros2 core), logging en orchestration van nodes.")
+  Container(llc, "Low-level Embedded Computer", "MCU/RTOS + micro-ROS/CAN", "Motor-/actuator-aansturing, veiligheids- en state-machine.")
+  Container(sensors, "Sensor Suite", "RGB‑D, GNSS, camera, LiDAR, IMU", "Levert data via ROS 2 topics.")
+}
+
+
+Rel(sensors, oc, "Sensor data (pointclouds, images, IMU)", "ROS 2 topics")
+Rel(UI, oc, "Teleop/Goals (handmatig of via UI)", "ROS 2 topics/services")
+
+Rel(oc, llc, "cmd_vel / setpoints", "ROS 2 topics")
+Rel(llc, oc, "Odometry / status", "ROS 2 topics")
+
+Rel(UI, oc, "Interacties en monitoring", "ROS 2")
+Rel(net, oc, "Netwerkverbinding", "Ethernet/Wi‑Fi/LTE")
+
+Rel(rtk, net, "RTK-correcties (NTRIP)", "NTRIP/RTCM")
+Rel(operator, UI, "Bedienen/monitoren", "Web/Joystick")
+
+SHOW_LEGEND()
+@enduml
+
+
+@startuml "Onboard Computing Runtime Diagram"
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+' LAYOUT_LANDSCAPE()
+' Skinparams for better layout
+' Use orthogonal lines for better readability ortho/polyline
+' skinparam linetype ortho
+' spacing between nodes
+skinparam ranksep 80
+skinparam nodesep 80
+
+title Components – de belangrijkste ROS 2‑nodes/pakketten en veiligheidsstromen.
+
+System(UI, "User Interface", "UI for teleoperation and monitoring.")
+' System_Ext(rtkcaster, "RTK Caster", "NTRIP/RTCM-corrections")
+System_Boundary(sim, "Gazebo Simulation/Physical Robot") {
+  Container(sensors, "Sensor Suite", "RGB‑D, GNSS, camera, LiDAR, IMU", "Levert data via ROS 2 topics.")
+  Container(llc, "Low-level Embedded Computer", "MCU/RTOS + micro-ROS/CAN", "Motor-/actuator-aansturing, veiligheids- en state-machine.")
+}
+
+' ROS2-runtime en nodes
+Container_Boundary(ros2, "Onboard Computing Runtime") {
+  Component(control, "Application Control", "Task specific control logic", "Interface for high-level commands")
+  Component(percloc, "Perception & Localization", "robot_localization / SLAM/AMCL / navsat_transform", "Fuseert sensoren en levert pose/odometrie.")
+  Component(teleop, "Teleoperation", "teleop_twist_joy + custom teleop node", "Zorgt voor teleoperation input en E‑stop monitoring.")
+  Component(mux, "Command Mux", "twist_mux + teleop_twist_joy + E‑stop monitor", "Combineert teleop en autonome commando’s.")
+  Component(nav, "Navigation & Control", "Nav2/Moveit2 (Planner, Controller, BT Navigator, costmaps)", "Plant & bestuurt de robot.")
+  Component(hwinterface, "ROS 2 hardware interface", "driver, description, interfaces", "Low‑level aandrijving/IO.")
+  Component(diag, "Monitoring & logging", "diagnostics / rosbag / CLI‑tools", "Logging, status en analyse.")
+  Component(ntrip, "NTRIP Client", "GNSS localization", "Haalt NTRIP/RTCM-correcties op en levert die aan de GNSS‑ontvanger.")
+
+}
+
+Rel(UI, control, "Goals (handmatig of via UI)", "ROS 2 topics/services")
+Rel(control, nav, "Goals (handmatig of via UI)", "ROS 2 topics/services")
+Rel_R(UI, teleop, "Teleop (handmatig of via UI)", "ROS 2 topics/services")
+Rel(teleop, mux, "cmd_vel", "ROS 2 topics/services")
+Rel(nav, mux, "cmd_vel", "ROS 2 topics/services")
+
+Rel(mux, hwinterface, "cmd_vel (gemuxed)", "ROS 2")
+
+Rel(hwinterface, llc, "hardware actuation", "ROS 2")
+Rel(hwinterface, diag, "Status/diagnostics", "ROS 2")
+
+Rel(llc, percloc, "odometry", "ROS 2")
+
+' Rel(rtkcaster, ntrip, "Stuurt RTCM-correcties", "NTRIP/HTTP")
+Rel(ntrip, sensors, "Stuurt RTCM-correcties door", "Serial/TCP")
+Rel(sensors, percloc, "GNSS/pointcloud/laser scan", "NMEA/driver → ROS 2")
+Rel(percloc, nav, "Pose/TF/odometrie", "ROS 2 topics")
+Rel(sensors, control, "vision", "ROS 2 topics")
+
+SHOW_LEGEND()
+@enduml
