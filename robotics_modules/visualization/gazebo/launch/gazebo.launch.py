@@ -8,7 +8,7 @@ from launch_ros.substitutions import FindPackageShare
 from ament_index_python.packages import get_package_share_directory
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-
+from utilities.osm2sdf.osm2sdf import create_map_world
 
 def launch_setup(context: LaunchContext) -> list:
     """The launch setup.
@@ -24,6 +24,9 @@ def launch_setup(context: LaunchContext) -> list:
     world = LaunchConfiguration('world')
     parameter_bridge_config = LaunchConfiguration('parameter_bridge_config')
     
+    if world.perform(context) == 'generated_world':
+        create_map_world(lat=51.708276, lon=5.299235)
+
     gz_gui_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             FindPackageShare('ros_gz_sim'),
