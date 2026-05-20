@@ -1,88 +1,90 @@
-# Copyright (c) 2024 Intelligent Robotics Lab (URJC)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-from launch import LaunchDescription
+from launch import LaunchDescription, LaunchContext
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
-import launch_ros.descriptions
 from launch_ros.substitutions import FindPackageShare
+from launch.actions import OpaqueFunction
+
+import xacro
+import yaml
+def launch_setup(context: LaunchContext) -> list:
+    """The launch setup.
+
+    Args:
+        context (LaunchContext): The launch context.
+
+    Returns:
+        list: The actions to start.
+    """
+    # --- Retrieve evaluated arguments ---
+    xacro_file = LaunchConfiguration("xacro_file").perform(context)
+    xacro_args = yaml.safe_load(LaunchConfiguration("xacro_arguments").perform(context))
+    xacro_args['namespace'] = LaunchConfiguration("namespace").perform(context)
+    # xacro_args['ros_control_config_file'] = "/alliander/ros/install/go2_description/share/go2_description/config/ros_control.yaml"
+    namespace = LaunchConfiguration("namespace")
+    use_sim_time = LaunchConfiguration("use_sim_time")
+    
+    # --- Process xacro ---
+    robot_description = xacro.process_file(xacro_file, mappings=xacro_args).toxml()
+  
+    robot_state_publisher = Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        name='robot_state_publisher',
+        namespace=namespace,
+        output='screen',
+        parameters=[{
+            'use_sim_time': use_sim_time,
+            'robot_description': robot_description,
+            'publish_frequency': 10.0,
+            'frame_prefix': '',
+        }],
+    )
+    return [robot_state_publisher]
 
 
-def generate_launch_description():
+def generate_launch_description() -> LaunchDescription:
+    """Generate the launch description.
 
+    Returns:
+        LaunchDescription: The launch description.
+    """
     declared_arguments = []
-    nodes = []
 
     declared_arguments.append(
         DeclareLaunchArgument(
-            'description_package',
-            default_value='go2_description',
-            description='Description package with robot URDF/xacro files made by manufacturer.',
+            'xacro_file',
+            default_value=PathJoinSubstitution([
+                FindPackageShare('go2_description'),
+                'xacro',
+                'unitree_go2.xacro']),
+            description='xacro file to be added to the robot description.',
         )
     )
+
     declared_arguments.append(
         DeclareLaunchArgument(
-            'description_file',
-            default_value='go2_description.urdf',
-            description='URDF/XACRO description file with the robot.',
+            'xacro_arguments',
+            default_value='{}',
+            description='xacro arguments to be added to the robot description.',
         )
     )
+
     declared_arguments.append(
         DeclareLaunchArgument(
-            'prefix',
+            'namespace',
             default_value='',
-            description='Prefix to be added to the robot description.',
+            description='namespace to be added to the robot description.',
         )
     )
+
     declared_arguments.append(
         DeclareLaunchArgument(
             'use_sim_time',
-            default_value='False',
+            default_value='True',
             description='Use simulation/Gazebo clock if true',
         )
     )
 
-    description_file = LaunchConfiguration('description_file')
-    prefix = LaunchConfiguration('prefix')
-    use_sim_time = LaunchConfiguration('use_sim_time')
+    return LaunchDescription(declared_arguments +[OpaqueFunction(function=launch_setup)])
 
-    robot_description_content = Command(
-        [
-            PathJoinSubstitution([FindExecutable(name='xacro')]),
-            ' ',
-            PathJoinSubstitution([FindPackageShare('go2_description'), 'urdf', description_file]),
-            ' ',
-            'prefix:=', prefix
-        ]
-    )
-
-    robot_description_param = launch_ros.descriptions.ParameterValue(robot_description_content,
-                                                                     value_type=str)
-
-    nodes.append(Node(
-        package='robot_state_publisher',
-        executable='robot_state_publisher',
-        name='robot_state_publisher',
-        output='screen',
-        parameters=[{
-            'use_sim_time': use_sim_time,
-            'robot_description': robot_description_param,
-            'publish_frequency': 10.0,
-            'frame_prefix': '',
-            }],
-        )
-    )
-
-    return LaunchDescription(declared_arguments + nodes)

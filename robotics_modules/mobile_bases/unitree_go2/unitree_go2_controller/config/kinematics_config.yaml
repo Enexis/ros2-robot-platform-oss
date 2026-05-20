@@ -1,0 +1,29 @@
+# config/kinematics_config.yaml
+# Flattened structure for CHAMP compatibility
+/**:
+  quadruped_controller:
+    ros__parameters:
+      # Flatten links_map for direct parameter access
+      links_map.left_front: ["FL_hip", "FL_thigh", "FL_calf"]
+      links_map.right_front: ["FR_hip", "FR_thigh", "FR_calf"]
+      links_map.left_hind: ["RL_hip", "RL_thigh", "RL_calf"]
+      links_map.right_hind: ["RR_hip", "RR_thigh", "RR_calf"]
+
+      # Flatten joints_map for direct parameter access
+      joints_map.left_front: ["FL_hip_joint", "FL_thigh_joint", "FL_calf_joint"]
+      joints_map.right_front: ["FR_hip_joint", "FR_thigh_joint", "FR_calf_joint"]
+      joints_map.left_hind: ["RL_hip_joint", "RL_thigh_joint", "RL_calf_joint"]
+      joints_map.right_hind: ["RR_hip_joint", "RR_thigh_joint", "RR_calf_joint"]
+
+      # Gait parameters
+      gait.knee_orientation: ">>"
+      gait.pantograph_leg: false
+      gait.odom_scaler: 0.9
+      gait.max_linear_velocity_x: 0.5
+      gait.max_linear_velocity_y: 0.25
+      gait.max_angular_velocity_z: 0.5
+      gait.com_x_translation: 0.0
+      gait.swing_height: 0.04
+      gait.stance_depth: 0.01
+      gait.stance_duration: 0.25
+      gait.nominal_height: 0.225
