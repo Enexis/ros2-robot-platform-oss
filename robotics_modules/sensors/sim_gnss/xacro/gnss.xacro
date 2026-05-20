@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <gazebo>
+        <plugin filename="gz-sim-navsat-system"
+            name="gz::sim::systems::NavSat">
+        </plugin>
+
+        <!-- add to gz world -->
+        <!-- <spherical_coordinates>
+            <surface_model>EARTH_WGS84</surface_model>
+            <world_frame_orientation>ENU</world_frame_orientation>
+            <latitude_deg>51.424</latitude_deg>
+            <longitude_deg>5.4943</longitude_deg>
+            <elevation>0</elevation>
+            <heading_deg>0</heading_deg>
+        </spherical_coordinates> -->
+        <!--  -->
+    </gazebo>
+
+    <link name="gps_link" />
+
+    <gazebo reference="gps_link">
+        <sensor name="navsat" type="navsat">
+            <always_on>true</always_on>
+            <update_rate>10</update_rate>
+            <topic>$(arg namespace)/gps/fix</topic>
+            <gz_frame_id>gps_link</gz_frame_id>
+            <navsat>
+                <position_sensing>
+                    <horizontal>
+                        <noise type="gaussian">
+                            <mean>0.0</mean>
+                            <stddev>0.0</stddev>
+                        </noise>
+                    </horizontal>
+                    <vertical>
+                        <noise type="gaussian">
+                            <mean>0.0</mean>
+                            <stddev>0.0</stddev>
+                        </noise>
+                    </vertical>
+                </position_sensing>
+            </navsat>
+        </sensor>
+    </gazebo>
+    
+
+</robot>
