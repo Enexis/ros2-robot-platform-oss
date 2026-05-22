@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+
+<robot name="go2" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:include filename="$(find sim_lidar)/xacro/lidar.xacro"/>
+    <xacro:include filename="$(find sim_gnss)/xacro/gnss.xacro"/>
+    <xacro:include filename="$(find go2_description)/xacro/unitree_go2.xacro"/>
+
+    <!-- Joint attaching lidar to trunk (mounted on top) -->
+    <joint name="lidar_joint" type="fixed">
+        <parent link="trunk"/>
+        <child link="lidar_link"/>
+        <!-- Positioned on top of the trunk, centered -->
+        <origin xyz="0.22 0.0 ${trunk_height/2.0 + lidar_height/2.0 + 0.051}" rpy="0 0 0"/>
+    </joint>
+
+    <joint name="gps_joint" type="fixed">
+        <parent link="trunk"/>
+        <child link="gps_link"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+
+</robot>
