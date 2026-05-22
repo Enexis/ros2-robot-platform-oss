@@ -12,6 +12,8 @@ find_package(ament_cmake REQUIRED)
 
 find_package(ros_gz_sim REQUIRED)
 find_package(ros_gz_bridge REQUIRED)
+find_package(ros_gz_interfaces REQUIRED)
+find_package(gz_ros2_control REQUIRED)
 
 install(DIRECTORY
   launch config worlds
