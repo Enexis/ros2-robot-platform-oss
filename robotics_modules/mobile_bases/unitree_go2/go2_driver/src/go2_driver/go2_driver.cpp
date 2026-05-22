@@ -138,18 +138,19 @@ void Go2Driver::publish_lidar(const sensor_msgs::msg::PointCloud2::SharedPtr msg
 
 void Go2Driver::publish_pose_stamped(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
 {
-  geometry_msgs::msg::TransformStamped transform;
-  transform.header.stamp = now();
-  transform.header.frame_id = "odom";
-  transform.child_frame_id = "base_link";
-  transform.transform.translation.x = msg->pose.position.x;
-  transform.transform.translation.y = msg->pose.position.y;
-  transform.transform.translation.z = msg->pose.position.z + 0.07;
-  transform.transform.rotation.x = msg->pose.orientation.x;
-  transform.transform.rotation.y = msg->pose.orientation.y;
-  transform.transform.rotation.z = msg->pose.orientation.z;
-  transform.transform.rotation.w = msg->pose.orientation.w;
-  tf_broadcaster_.sendTransform(transform);
+  // Transform should be published by a localization node, not the driver node.
+  // geometry_msgs::msg::TransformStamped transform;
+  // transform.header.stamp = now();
+  // transform.header.frame_id = "odom";
+  // transform.child_frame_id = "base_link";
+  // transform.transform.translation.x = msg->pose.position.x;
+  // transform.transform.translation.y = msg->pose.position.y;
+  // transform.transform.translation.z = msg->pose.position.z + 0.07;
+  // transform.transform.rotation.x = msg->pose.orientation.x;
+  // transform.transform.rotation.y = msg->pose.orientation.y;
+  // transform.transform.rotation.z = msg->pose.orientation.z;
+  // transform.transform.rotation.w = msg->pose.orientation.w;
+  // tf_broadcaster_.sendTransform(transform);
 
   if (!odom_published_) {
     nav_msgs::msg::Odometry odom;
