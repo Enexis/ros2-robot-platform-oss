@@ -32,3 +32,13 @@ services:
       - /bin/bash 
       - -c
       - ros2 launch localization localization.launch.py start_ekf_local:=True use_sim_time:=False
+  go2-nav:
+    extends:
+      service: common
+      file: ../docker-compose.common.yml
+    container_name: go2-nav
+    image: enexis/go2:latest
+    command:
+      - /bin/bash 
+      - -c
+      - ros2 launch nav2 nav2.launch.py use_sim_time:=False
