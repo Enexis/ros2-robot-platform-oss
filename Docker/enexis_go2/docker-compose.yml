@@ -1,0 +1,34 @@
+services: 
+  enexis-go2:
+    extends:
+      service: common
+      file: ../docker-compose.common.yml
+    container_name: enexis-go2
+    image: enexis/go2:latest
+    build:
+      context: ../../
+      dockerfile: Docker/enexis_go2/Dockerfile
+      target: go2
+    volumes:
+      - ../../cyclonedds:/workspace/cyclonedds
+      # Share X11 socket to allow GUI applications from the container
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # Share X11 auth file so GUI works with the host X server
+      - $HOME/.Xauthority:/tmp/.Xauthority:rw
+      # Map full /dev to allow access to hardware (e.g. sensors, serial ports)
+      - /dev:/dev
+    command:
+      - /bin/bash 
+      - -c
+      - ros2 launch enexis_go2 go2.launch.py use_sim_time:=False
+  
+  go2-localization:
+    extends:
+      service: common
+      file: ../docker-compose.common.yml
+    container_name: go2-localization
+    image: enexis/go2:latest
+    command:
+      - /bin/bash 
+      - -c
+      - ros2 launch localization localization.launch.py start_ekf_local:=True use_sim_time:=False
