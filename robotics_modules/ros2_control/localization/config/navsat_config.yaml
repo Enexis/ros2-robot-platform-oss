@@ -4,8 +4,6 @@
       world_frame: map
       broadcast_cartesian_transform: true
       frame_id: map
-      broadcast_utm_transform: true
-      broadcast_utm_transform_as_parent_frame: true
       frequency: 10.0
       delay: 3.0
       # Enter the magnetic declination for your location. If you don’t know it, see http://www.ngdc.noaa.gov/geomag-web (make sure to convert the value to radians). 
