@@ -34,9 +34,11 @@ if [ -f \"/${WORKDIR}/install/setup.bash\" ]; then\n\
     source \"/${WORKDIR}/install/setup.bash\"\n\
 fi" >> /root/.bashrc
 
-
 ENV DEBIAN_FRONTEND=
+
+# Use an entrypoint script to source the ROS2 and workspace setup files for when a container starts non interactively.
 COPY ./Docker/entrypoint.sh /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
 
 ###########################################
 # Dev image with development tools
@@ -64,15 +66,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tree \
     ros-dev-tools
 
-# Install ROS2 tools and gazebo
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ros-$ROS_DISTRO-rqt* \
-    ros-$ROS_DISTRO-teleop-twist-keyboard \
-    ros-$ROS_DISTRO-ros-gz \
-    ros-$ROS_DISTRO-gz-ros2-control \
-    unzip \
-    default-jre
-
 # Install LLVM 18 (for C++ compilation)
 RUN wget --progress=dot:giga https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh 18 all
 RUN update-alternatives --install /usr/bin/clangd clangd /usr/bin/clangd-18 100 \
@@ -83,34 +76,41 @@ RUN update-alternatives --install /usr/bin/clangd clangd /usr/bin/clangd-18 100 
 
 ENV CC=/usr/bin/clang-18
 ENV CXX=/usr/bin/clang++-18
-ENV DEBIAN_FRONTEND=
+
+# Install ROS2 tools and gazebo
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ros-$ROS_DISTRO-rqt* \
+    ros-$ROS_DISTRO-teleop-twist-keyboard \
+    ros-$ROS_DISTRO-rviz-satellite \
+    ros-$ROS_DISTRO-ros-gz \
+    ros-$ROS_DISTRO-gz-ros2-control \
+    unzip \
+    default-jre
+
+# Copy all modules so we only have to build once
+COPY robotics_modules /$WORKDIR/src/
+COPY utilities /$WORKDIR/utilities/
+RUN /$WORKDIR/utilities/osm2sdf/osm2sdf_install.sh -g
+RUN echo 'export PYTHONPATH=$PYTHONPATH:/workspace' >> ~/.bashrc
 
 # Setup workspace directory
 WORKDIR /$WORKDIR
 
-# Add argcomplete for ROS2 and colcon
-RUN echo "eval \"$(/usr/bin/register-python-argcomplete3 ros2)\"" >> ~/.bashrc \
+# Update package lists and install dependencies and build
+RUN apt-get update \
+    && . /opt/ros/${ROS_DISTRO}/setup.sh \
+    && rosdep install --from-paths src --ignore-src -r -y \
+    && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Debug
+  
+    # Add argcomplete for ROS2 and colcon
+    RUN echo "eval \"$(/usr/bin/register-python-argcomplete3 ros2)\"" >> ~/.bashrc \
     && echo "eval \"$(/usr/bin/register-python-argcomplete3 colcon)\"" >> ~/.bashrc
-
-# Add helpful aliases for development
-RUN echo "alias cb='colcon build --symlink-install'" >> ~/.bashrc && \
+    
+    # Add helpful aliases for development
+    RUN echo "alias cb='colcon build --symlink-install'" >> ~/.bashrc && \
     echo "alias cbs='colcon build --symlink-install --packages-select'" >> ~/.bashrc && \
     echo "alias ct='colcon test'" >> ~/.bashrc && \
     echo "alias ctr='colcon test-result --verbose'" >> ~/.bashrc && \
     echo "alias resource='source /opt/ros/\${ROS_DISTRO}/setup.bash && source /workspace/install/setup.bash'" >> ~/.bashrc
-
-# The workspace will be attached as a volume but we copy the source files here to speed up the initial build when using docker-compose
-COPY robotics_modules /$WORKDIR/src/
-COPY utilities /$WORKDIR/utilities/
-RUN /$WORKDIR/utilities/osm2sdf/osm2sdf_install.sh -g
-
-# Update package lists and install dependencies   
-# Build workspace with debug symbols for development
-RUN apt-get update \
-    && . /opt/ros/${ROS_DISTRO}/setup.sh \
-    && rosdep install --from-paths src --ignore-src -r -y \
-    && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo 
-
-RUN echo 'export PYTHONPATH=$PYTHONPATH:/workspace' >> ~/.bashrc
-
-ENTRYPOINT ["/entrypoint.sh"]
+    
+    ENV DEBIAN_FRONTEND=

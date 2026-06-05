@@ -1,6 +1,7 @@
 services:
   common:
     volumes: 
+      - ../cyclonedds:/workspace/cyclonedds
       # Share X11 socket to allow GUI applications from the container
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       # Share X11 auth file so GUI works with the host X server

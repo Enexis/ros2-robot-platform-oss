@@ -23,9 +23,14 @@ def launch_setup(context: LaunchContext) -> list:
     use_sim_time = LaunchConfiguration('use_sim_time')
     world = LaunchConfiguration('world')
     parameter_bridge_config = LaunchConfiguration('parameter_bridge_config')
+    map_lat = LaunchConfiguration('map_lat')
+    map_lon = LaunchConfiguration('map_lon')
     
     if world.perform(context) == 'generated_world':
-        create_map_world(lat=51.708276, lon=5.299235)
+        create_map_world(
+            lat=float(map_lat.perform(context)),
+            lon=float(map_lon.perform(context)),
+        )
 
     gz_gui_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
@@ -99,6 +104,16 @@ def generate_launch_description() -> LaunchDescription:
             ),
         description='Path to the parameter bridge configuration file'
     )
+    declare_map_lat_cmd = DeclareLaunchArgument(
+        'map_lat',
+        default_value='51.708276',
+        description='Latitude for the generated world'
+    )
+    declare_map_lon_cmd = DeclareLaunchArgument(
+        'map_lon',
+        default_value='5.299235',
+        description='Longitude for the generated world'
+    )
     declare_spawn_x_cmd = DeclareLaunchArgument(
         'spawn_x',
         default_value='0.0',
@@ -122,6 +137,8 @@ def generate_launch_description() -> LaunchDescription:
             declare_namespace_cmd,
             declare_sim_time_cmd,
             declare_parameter_bridge_config_cmd,
+            declare_map_lat_cmd,
+            declare_map_lon_cmd,
             declare_spawn_x_cmd,
             declare_spawn_y_cmd,
             declare_spawn_z_cmd,
