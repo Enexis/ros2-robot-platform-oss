@@ -79,8 +79,6 @@ ENV CXX=/usr/bin/clang++-18
 
 # Install ROS2 tools and gazebo
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ros-$ROS_DISTRO-navigation2 \
-    ros-$ROS_DISTRO-nav2-bringup \
     ros-$ROS_DISTRO-ros-gz \
     ros-$ROS_DISTRO-gz-ros2-control \
     ros-$ROS_DISTRO-rqt* \

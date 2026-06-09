@@ -6,11 +6,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /$WORKDIR
 
-# Install navigation2 and related packages
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ros-$ROS_DISTRO-navigation2 \
-    ros-$ROS_DISTRO-nav2-bringup
-
 COPY robotics_modules/platform_kits/enexis_go2 /$WORKDIR/src/enexis_go2
 COPY robotics_modules/mobile_bases/unitree_go2 /$WORKDIR/src/unitree_go2
 COPY robotics_modules/sensors/sim_gnss /$WORKDIR/src/sim_gnss
