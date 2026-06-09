@@ -33,6 +33,7 @@ services:
       - -c
       - ros2 launch localization localization.launch.py start_ekf_local:=True use_sim_time:=False
   go2-nav:
+    profiles: ["nav"]
     extends:
       service: common
       file: ../docker-compose.common.yml
