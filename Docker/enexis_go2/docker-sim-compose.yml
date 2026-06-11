@@ -21,6 +21,18 @@ services:
       - -c
       - ros2 launch localization localization.launch.py start_ekf_local:=True use_sim_time:=True
 
+  sim-nav:
+    profiles: ["nav"]
+    extends:
+      service: common
+      file: ../docker-compose.common.yml
+    container_name: sim-nav
+    image: enexis/go2:latest
+    command:
+      - /bin/bash 
+      - -c
+      - ros2 launch nav2 nav2.launch.py use_sim_time:=True
+
   rviz:
     extends:
       service: common

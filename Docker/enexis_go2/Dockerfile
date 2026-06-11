@@ -12,6 +12,7 @@ COPY robotics_modules/sensors/sim_gnss /$WORKDIR/src/sim_gnss
 COPY robotics_modules/sensors/sim_lidar /$WORKDIR/src/sim_lidar
 
 COPY robotics_modules/ros2_control/localization /$WORKDIR/src/localization
+COPY robotics_modules/ros2_control/nav2 /$WORKDIR/src/nav2
 
 # Build the workspace with the specified packages and clean up to reduce image size
 RUN . /opt/ros/${ROS_DISTRO}/setup.sh && \
