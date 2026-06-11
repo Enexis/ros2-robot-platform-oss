@@ -1,0 +1,20 @@
+services: 
+  rxtools:
+    extends:
+      service: common
+      file: ../docker-compose.common.yml
+    container_name: rxtools
+    image: rxtools:latest
+    build:
+      target: rxtools
+    volumes:
+      # Share X11 socket to allow GUI applications from the container
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # Share X11 auth file so GUI works with the host X server
+      - $HOME/.Xauthority:/tmp/.Xauthority:rw
+      # Map full /dev to allow access to hardware (e.g. sensors, serial ports)
+      - /dev:/dev:ro
+    command:
+          - /bin/bash 
+          - -c
+          - tail -f /dev/null
