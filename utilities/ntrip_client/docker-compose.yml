@@ -28,7 +28,7 @@ services:
       # Share X11 auth file so GUI works with the host X server
       - $HOME/.Xauthority:/tmp/.Xauthority:rw
       # Map full /dev to allow access to hardware (e.g. sensors, serial ports)
-      - /dev:/dev
+      - /dev:/dev:ro
       - ./config:/config:ro
     healthcheck:
       test:
@@ -58,7 +58,7 @@ services:
       # Share X11 auth file so GUI works with the host X server
       - $HOME/.Xauthority:/tmp/.Xauthority:rw
       # Map full /dev to allow access to hardware (e.g. sensors, serial ports)
-      - /dev:/dev
+      - /dev:/dev:ro
       - ./config:/config:rw
     healthcheck:
       test:
