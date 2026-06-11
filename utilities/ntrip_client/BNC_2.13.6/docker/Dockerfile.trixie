@@ -1,0 +1,25 @@
+# Usage: cd .. && docker/podman build -t trixie/bnc:v2.13.2 -f docker/Dockerfile.trixie .
+FROM debian:trixie-slim
+
+RUN apt update && apt upgrade -y
+RUN apt install -y build-essential libssl-dev
+RUN apt install -y \
+    qtbase5-dev \
+    libqt5concurrent5 \
+    libqt5network5 \
+    libqt5printsupport5 \
+    libqt5svg5-dev \
+    libqt5opengl5
+
+COPY bnc_plugin.pro bnc.pro /tmp/BNC/
+COPY newmat /tmp/BNC/newmat/
+COPY qwt /tmp/BNC/qwt/
+COPY qwtpolar /tmp/BNC/qwtpolar/
+COPY src /tmp/BNC/src/
+
+WORKDIR /tmp/BNC
+RUN qmake bnc.pro && make
+
+RUN echo '/tmp/BNC/bnc created'
+RUN ./bnc --version
+RUN cat /etc/*release && gcc --version && qmake --version

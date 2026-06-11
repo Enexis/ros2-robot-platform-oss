@@ -1,0 +1,22 @@
+FROM centos:7
+
+RUN yum -y update
+RUN yum -y install gcc-c++ make libpng-devel openssl-devel unzip
+RUN yum -y install \
+    qt5-qtbase-devel \
+    qt5-qtsvg-devel \
+    qt5-qtwebkit-devel \
+    qt5-qtwebengine-devel
+
+COPY bnc_plugin.pro bnc.pro /tmp/BNC/
+COPY newmat /tmp/BNC/newmat/
+COPY qwt /tmp/BNC/qwt/
+COPY qwtpolar /tmp/BNC/qwtpolar/
+COPY src /tmp/BNC/src/
+
+WORKDIR /tmp/BNC
+RUN qmake-qt5 bnc.pro && make
+
+RUN echo '/tmp/BNC/bnc created'
+RUN ./bnc --version
+RUN cat /etc/*release && gcc --version && qmake-qt5 --version

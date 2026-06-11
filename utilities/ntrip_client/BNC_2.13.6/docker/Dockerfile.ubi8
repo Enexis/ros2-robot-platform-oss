@@ -1,0 +1,22 @@
+FROM redhat/ubi8:latest
+
+RUN dnf -y update
+RUN dnf -y install gcc-c++ libpng-devel openssl-devel unzip
+RUN dnf -y install \
+    qt5-qtbase-devel \
+    qt5-qtsvg-devel \
+    qt5-qtwebkit-devel \
+    qt5-qtwebengine-devel
+
+COPY bnc_plugin.pro bnc.pro /tmp/BNC/
+COPY newmat /tmp/BNC/newmat/
+COPY qwt /tmp/BNC/qwt/
+COPY qwtpolar /tmp/BNC/qwtpolar/
+COPY src /tmp/BNC/src/
+
+WORKDIR /tmp/BNC
+RUN qmake-qt5 bnc.pro && make
+
+RUN echo '/tmp/BNC/bnc created'
+RUN ./bnc --version
+RUN cat /etc/*release && gcc --version && qmake-qt5 --version
