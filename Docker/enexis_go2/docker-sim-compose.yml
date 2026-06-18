@@ -53,4 +53,4 @@ services:
     command:
       - /bin/bash
       - -c
-      - ros2 launch gazebo gazebo.launch.py world:=generated_world
+      - ros2 launch gazebo gazebo.launch.py world:=generated_world map_lat:=51.708924 map_lon:=5.299473
