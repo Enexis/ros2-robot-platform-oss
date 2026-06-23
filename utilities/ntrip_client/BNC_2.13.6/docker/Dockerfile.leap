@@ -1,0 +1,23 @@
+FROM opensuse/leap:15.6
+
+RUN zypper -n update
+RUN zypper -n in gcc-c++ libpng-devel libopenssl-devel unzip
+RUN zypper -n in \
+    libQt5Concurrent-devel \
+    libQt5Network-devel \
+    libQt5PrintSupport-devel \
+    libqt5-qtsvg-devel \
+    libQt5OpenGL-devel
+
+COPY bnc_plugin.pro bnc.pro /tmp/BNC/
+COPY newmat /tmp/BNC/newmat/
+COPY qwt /tmp/BNC/qwt/
+COPY qwtpolar /tmp/BNC/qwtpolar/
+COPY src /tmp/BNC/src/
+
+WORKDIR /tmp/BNC
+RUN qmake-qt5 bnc.pro && make
+
+RUN echo '/tmp/BNC/bnc created'
+RUN ./bnc --version
+RUN cat /etc/*release && gcc --version && qmake-qt5 --version

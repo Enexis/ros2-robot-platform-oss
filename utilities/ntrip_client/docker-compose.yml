@@ -1,0 +1,72 @@
+services: 
+  # Build bnc using image to copy over to ntrip_client
+  bnc:
+    profiles: ["never-run"]
+    build:
+      context: ./BNC_2.13.6
+      dockerfile: docker/Dockerfile.bookworm
+    image: bnc:latest
+
+  ntrip_client:
+    profiles: [""]
+    container_name: ntrip_client
+    image: ntrip_client:latest
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: ntrip_client
+    privileged: true
+    network_mode: host
+    tty: true
+    environment:
+      XAUTHORITY: /tmp/.Xauthority
+      DISPLAY: 
+      RCUTILS_COLORIZED_OUTPUT: 1
+    volumes:
+      # Share X11 socket to allow GUI applications from the container
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # Share X11 auth file so GUI works with the host X server
+      - $HOME/.Xauthority:/tmp/.Xauthority:rw
+      # Map full /dev to allow access to hardware (e.g. sensors, serial ports)
+      - /dev:/dev:ro
+      - ./config:/config:ro
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - '[ -f /tmp/startup_complete ]'
+      interval: 1s
+      retries: 1000
+    command:
+          - /bin/bash 
+          - -c
+          - bnc --nw --conf /config/rtk_serial_link.bnc
+
+  ntrip_client_config:
+    profiles: ["config"]
+    container_name: ntrip_client_config
+    image: ntrip_client:latest
+    privileged: true
+    network_mode: host
+    tty: true
+    environment:
+      XAUTHORITY: /tmp/.Xauthority
+      DISPLAY: 
+      RCUTILS_COLORIZED_OUTPUT: 1
+    volumes:
+      # Share X11 socket to allow GUI applications from the container
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # Share X11 auth file so GUI works with the host X server
+      - $HOME/.Xauthority:/tmp/.Xauthority:rw
+      # Map full /dev to allow access to hardware (e.g. sensors, serial ports)
+      - /dev:/dev:ro
+      - ./config:/config:rw
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - '[ -f /tmp/startup_complete ]'
+      interval: 1s
+      retries: 1000
+    command:
+          - /bin/bash 
+          - -c
+          - bnc --conf /config/rtk_serial_link.bnc

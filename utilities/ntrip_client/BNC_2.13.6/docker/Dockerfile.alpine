@@ -1,0 +1,15 @@
+FROM alpine:3.19
+
+RUN apk add --no-cache unzip make g++ qt5-qtbase-dev qt5-qtsvg-dev
+
+COPY bnc_plugin.pro bnc.pro /tmp/BNC/
+COPY newmat /tmp/BNC/newmat/
+COPY qwt /tmp/BNC/qwt/
+COPY qwtpolar /tmp/BNC/qwtpolar/
+COPY src /tmp/BNC/src/
+
+WORKDIR /tmp/BNC
+RUN qmake bnc.pro && make
+RUN echo '/tmp/BNC/bnc created'
+RUN qmake --version
+RUN ./bnc --version
