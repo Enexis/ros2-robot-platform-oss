@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "unitree_path",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{"type":"Feature","properties":{"name":"Path","symbol":null,"number":0,"comment":null,"description":null,"source":null,"url":"Gedigitaliseerd in QGIS","url name":null,"time":null},"geometry":{"type":"LineString","coordinates":[[5.299495248044,51.708944465378003],[5.299495179709,51.708979757900998],[5.299583039588,51.708981470514999],[5.29958386757,51.708945002139998],[5.29949486978,51.708944229811998]]}}
+]
+}
