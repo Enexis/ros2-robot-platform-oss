@@ -32,6 +32,7 @@
 #define GO2_DRIVER__GO2_DRIVER_HPP_
 
 #include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <geometry_msgs/msg/twist.hpp>
@@ -124,7 +125,7 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_pub_;
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
-  rclcpp::Publisher<unitree_go::msg::IMUState>::SharedPtr imu_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
   rclcpp::Publisher<unitree_api::msg::Request>::SharedPtr request_pub_;
 
   rclcpp::Service<go2_interfaces::srv::BodyHeight>::SharedPtr set_body_height_service_;
