@@ -4,7 +4,7 @@ services:
     profiles: ["never-run"]
     build:
       context: ./BNC_2.13.6
-      dockerfile: docker/Dockerfile.bookworm
+      dockerfile: docker/Dockerfile.bullseye
     image: bnc:latest
 
   ntrip_client:
