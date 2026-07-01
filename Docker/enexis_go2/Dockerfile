@@ -10,12 +10,14 @@ COPY robotics_modules/platform_kits/enexis_go2 /$WORKDIR/src/enexis_go2
 COPY robotics_modules/mobile_bases/unitree_go2 /$WORKDIR/src/unitree_go2
 COPY robotics_modules/sensors/sim_gnss /$WORKDIR/src/sim_gnss
 COPY robotics_modules/sensors/sim_lidar /$WORKDIR/src/sim_lidar
+COPY robotics_modules/sensors/septentrio /$WORKDIR/src/septentrio
 
 COPY robotics_modules/ros2_control/localization /$WORKDIR/src/localization
 COPY robotics_modules/ros2_control/nav2 /$WORKDIR/src/nav2
 
 # Build the workspace with the specified packages and clean up to reduce image size
-RUN . /opt/ros/${ROS_DISTRO}/setup.sh && \
+RUN apt-get update && \
+    . /opt/ros/${ROS_DISTRO}/setup.sh && \
     rosdep install --from-paths src --ignore-src -r -y && \
     colcon build && \
     rm -rf /var/lib/apt/lists/*
