@@ -15,13 +15,41 @@
             base_link_frame: base_footprint
             world_frame: map
 
+            # Fuse local velocities of same topics as local ekf
             odom0: odom
-            odom0_config: [false, false, false,
+            odom0_config: [true, true, false,
                         false, false, false,
-                        true, true, false,
+                        false, false, false,
+                        false, false, false,
+                        false, false, false]
+            odom0_differential: true
+            odom0_relative: false
+
+            imu0: imu
+            imu0_config: [false, false, false,
+                        false, false, false,     
+                        false, false, false,
+                        false, false, true,     
+                        false, false, false]
+            imu0_differential: false
+            imu0_relative: false
+            imu0_remove_gravitational_acceleration: true
+            # =====================================
+
+            # Use absolute global gps yaw for orientation
+            # pose is lon, lat, height, roll, pitch, yaw
+            pose0: septentrio/orientation
+            pose0_config: [false,  false,  false,
+                        false, false, true,
+                        false, false, false,
                         false, false, false,
                         false, false, false]
 
+            pose0_differential: false
+            pose0_relative: false
+            # =====================================           
+                        
+            # Use global gps position output of navsatTransform
             odom1: odometry/gps
             odom1_config: [true,  true,  false,
                         false, false, false,
@@ -33,17 +61,7 @@
             odom1_nodelay: false
             odom1_differential: false
             odom1_relative: false
-
-            imu0: imu
-            imu0_config: [false, false, false,
-                        false, false, true,     
-                        false, false, false,
-                        false, false, false,     
-                        false, false, false]
-
-            imu0_differential: false
-            imu0_relative: false
-            imu0_remove_gravitational_acceleration: true
+            # =====================================
 
             process_noise_covariance: [0.05, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
                                         0.0,  0.05, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
