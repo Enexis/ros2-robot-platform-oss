@@ -62,7 +62,7 @@ def launch_setup(context: LaunchContext) -> list:
         remappings=[
             ("imu", "imu"),
             ("odometry/filtered", "odometry/global"),
-            # ('gps/fix', 'gps/fix'),
+            ('gps/fix', 'navsatfix'),
             # ('gps/filtered', 'gps/filtered'),
             # ('odometry/gps', 'odometry/gps'),
         ],
