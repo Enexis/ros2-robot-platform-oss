@@ -52,6 +52,19 @@ services:
           - -c
           - ros2 launch septentrio septentrio.launch.py path_to_config:=/workspace/install/septentrio/share/septentrio/config/rover.yaml
 
+  livox:
+    image: enexis/go2:latest
+    extends:
+      service: common
+      file: ../docker-compose.common.yml
+    depends_on:
+      platform_kit:
+        condition: service_healthy
+    command:
+      - /bin/bash
+      - -c
+      - ros2 launch livox livox_mid360s.launch.py frame_id:=lidar_link
+
   ntrip_client:
     image: ntrip_client:latest
     extends:

@@ -61,7 +61,19 @@ def launch_setup(context: LaunchContext) -> list:
         condition=IfCondition(LaunchConfiguration("rviz").perform(context)),
     )
 
-    return [robot_description_cmd, rviz_cmd]
+    livox_cmd = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("livox"), "launch", "livox_mid360s.launch.py"
+            )
+        ),
+        launch_arguments={
+            "frame_id": "lidar_link",
+        }.items(),
+        condition=IfCondition(LaunchConfiguration("livox").perform(context)),
+    )
+
+    return [robot_description_cmd, rviz_cmd, livox_cmd]
 
 
 def generate_launch_description() -> LaunchDescription:
@@ -101,6 +113,14 @@ def generate_launch_description() -> LaunchDescription:
             "rviz",
             default_value="False",
             description="Launch rviz.",
+        )
+    )
+
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "livox",
+            default_value="False",
+            description="Launch Livox MID360s driver.",
         )
     )
 
