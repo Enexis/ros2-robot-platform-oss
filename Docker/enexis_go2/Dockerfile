@@ -29,7 +29,7 @@ RUN apt-get update && \
     ldconfig && \
     . /opt/ros/${ROS_DISTRO}/setup.sh && \
     rosdep install --from-paths src --ignore-src -r -y && \
-    colcon build && \
+    colcon build --cmake-args -DDISTRO_ROS=${ROS_DISTRO} && \
     rm -rf /var/lib/apt/lists/*
     
     # rm -rf build log src && \
