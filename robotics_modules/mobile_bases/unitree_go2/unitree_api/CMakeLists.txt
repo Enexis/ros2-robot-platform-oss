@@ -38,14 +38,15 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   DEPENDENCIES geometry_msgs
 )
 
-rosidl_generate_dds_interfaces(
-  ${rosidl_generate_interfaces_TARGET}__dds_connext_idl
-  IDL_TUPLES ${rosidl_generate_interfaces_IDL_TUPLES}
-  OUTPUT_SUBFOLDERS "dds_connext"
-)
-add_dependencies(
-  ${PROJECT_NAME}
-  ${PROJECT_NAME}__dds_connext_idl
-)
+# rosidl_generate_dds_interfaces(
+#   ${rosidl_generate_interfaces_TARGET}__dds_connext_idl
+#   IDL_TUPLES ${rosidl_generate_interfaces_IDL_TUPLES}
+#   OUTPUT_SUBFOLDERS "dds_connext"
+# )
+# add_dependencies(
+#   ${PROJECT_NAME}
+#   ${PROJECT_NAME}__dds_connext_idl
+# )
+ament_export_dependencies(rosidl_default_runtime)
 
 ament_package()

@@ -44,7 +44,7 @@ Go2Driver::Go2Driver(
   pointcloud_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>("pointcloud", 10);
   joint_state_pub_ = create_publisher<sensor_msgs::msg::JointState>("joint_states", 10);
   odom_pub_ = create_publisher<nav_msgs::msg::Odometry>("odom", qos_profile);
-  imu_pub_ = create_publisher<unitree_go::msg::IMUState>("imu", 10);
+  imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("imu", 10);
   request_pub_ = create_publisher<unitree_api::msg::Request>("api/sport/request", 10);
 
   pointcloud_sub_ = create_subscription<sensor_msgs::msg::PointCloud2>(
@@ -132,7 +132,7 @@ Go2Driver::Go2Driver(
 void Go2Driver::publish_lidar(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
 {
   msg->header.stamp = now();
-  msg->header.frame_id = "radar";
+  msg->header.frame_id = "radar_link";
   pointcloud_pub_->publish(*msg);
 }
 
@@ -152,21 +152,30 @@ void Go2Driver::publish_pose_stamped(const geometry_msgs::msg::PoseStamped::Shar
   // transform.transform.rotation.w = msg->pose.orientation.w;
   // tf_broadcaster_.sendTransform(transform);
 
-  if (!odom_published_) {
-    nav_msgs::msg::Odometry odom;
-    odom.header.stamp = now();
-    odom.header.frame_id = "odom";
-    odom.child_frame_id = "base_link";
-    odom.pose.pose.position.x = msg->pose.position.x;
-    odom.pose.pose.position.y = msg->pose.position.y;
-    odom.pose.pose.position.z = msg->pose.position.z + 0.07;
-    odom.pose.pose.orientation.x = msg->pose.orientation.x;
-    odom.pose.pose.orientation.y = msg->pose.orientation.y;
-    odom.pose.pose.orientation.z = msg->pose.orientation.z;
-    odom.pose.pose.orientation.w = msg->pose.orientation.w;
-    odom_pub_->publish(odom);
-    odom_published_ = true;
-  }
+  // if (!odom_published_) {
+  nav_msgs::msg::Odometry odom;
+  odom.header.stamp = now();
+  odom.header.frame_id = "odom";
+  odom.child_frame_id = "base_link";
+  odom.pose.pose.position.x = msg->pose.position.x;
+  odom.pose.pose.position.y = msg->pose.position.y;
+  odom.pose.pose.position.z = msg->pose.position.z + 0.07;
+  odom.pose.pose.orientation.x = msg->pose.orientation.x;
+  odom.pose.pose.orientation.y = msg->pose.orientation.y;
+  odom.pose.pose.orientation.z = msg->pose.orientation.z;
+  odom.pose.pose.orientation.w = msg->pose.orientation.w;
+  odom.pose.covariance = {
+    0.01, 0,    0,    0,    0,    0,
+    0,    0.01, 0,    0,    0,    0,
+    0,    0,    0.01, 0,    0,    0,
+    0,    0,    0,    0.1,  0,    0,
+    0,    0,    0,    0,    0.1,  0,
+    0,    0,    0,    0,    0,    0.02
+  };
+
+  odom_pub_->publish(odom);
+    // odom_published_ = true;
+  // }
 }
 
 void Go2Driver::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
@@ -189,6 +198,30 @@ void Go2Driver::publish_joint_states(const unitree_go::msg::LowState::SharedPtr 
     msg->motor_state[6].q, msg->motor_state[7].q, msg->motor_state[8].q};
 
   joint_state_pub_->publish(joint_state);
+
+  sensor_msgs::msg::Imu imu_msg;
+  imu_msg.header.stamp = now();
+  imu_msg.header.frame_id = "imu_link";
+
+  imu_msg.orientation.w = msg->imu_state.quaternion[0];
+  imu_msg.orientation.x = msg->imu_state.quaternion[1];
+  imu_msg.orientation.y = msg->imu_state.quaternion[2];
+  imu_msg.orientation.z = msg->imu_state.quaternion[3];
+
+  imu_msg.angular_velocity.x = msg->imu_state.gyroscope[0];
+  imu_msg.angular_velocity.y = msg->imu_state.gyroscope[1];
+  imu_msg.angular_velocity.z = msg->imu_state.gyroscope[2];
+
+  imu_msg.linear_acceleration.x = msg->imu_state.accelerometer[0];
+  imu_msg.linear_acceleration.y = msg->imu_state.accelerometer[1];
+  imu_msg.linear_acceleration.z = msg->imu_state.accelerometer[2];
+
+  // Covariances taken from https://github.com/inria-paris-robotics-lab/go2_odometry/blob/master/src/go2_state_converter_node.cpp
+  imu_msg.orientation_covariance = {3e-10, 0, 0, 0, 3e-10, 0, 0, 0, 3e-4};       // accuracy = 0.001° (XY), 1° (Z)
+  imu_msg.angular_velocity_covariance = {1e-6, 0, 0, 0, 1e-6, 0, 0, 0, 1e-6};    // accuracy = 0.07 °/s
+  imu_msg.linear_acceleration_covariance = {6e-2, 0, 0, 0, 6e-2, 0, 0, 0, 6e-2}; // accuracy = 25 mG
+
+  imu_pub_->publish(imu_msg);
 }
 
 void Go2Driver::cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg)

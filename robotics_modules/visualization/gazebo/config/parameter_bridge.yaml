@@ -18,7 +18,7 @@
   gz_type_name: "gz.msgs.LaserScan"
   direction: "GZ_TO_ROS"
 
-- topic_name: "gps/fix"
+- topic_name: "/navsatfix"
   ros_type_name: "sensor_msgs/msg/NavSatFix"
   gz_type_name: "gz.msgs.NavSat"
   direction: "GZ_TO_ROS"

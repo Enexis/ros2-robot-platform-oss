@@ -1,45 +1,63 @@
 services: 
-  enexis-go2:
-    extends:
-      service: common
-      file: ../docker-compose.common.yml
-    container_name: enexis-go2
+  platform_kit:
     image: enexis/go2:latest
     build:
       context: ../../
       dockerfile: Docker/enexis_go2/Dockerfile
       target: go2
-    volumes:
-      - ../../cyclonedds:/workspace/cyclonedds
-      # Share X11 socket to allow GUI applications from the container
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      # Share X11 auth file so GUI works with the host X server
-      - $HOME/.Xauthority:/tmp/.Xauthority:rw
-      # Map full /dev to allow access to hardware (e.g. sensors, serial ports)
-      - /dev:/dev
+    extends:
+      service: common
+      file: ../docker-compose.common.yml
+    healthcheck:
+      test: ["CMD-SHELL", ". /opt/ros/jazzy/setup.sh && ros2 node list | grep -q /robot_state_publisher"]
+      interval: 2s
+      retries: 20
     command:
       - /bin/bash 
       - -c
       - ros2 launch enexis_go2 go2.launch.py use_sim_time:=False
   
-  go2-localization:
+  localization:
+    image: enexis/go2:latest
     extends:
       service: common
       file: ../docker-compose.common.yml
-    container_name: go2-localization
-    image: enexis/go2:latest
     command:
       - /bin/bash 
       - -c
       - ros2 launch localization localization.launch.py start_ekf_local:=True use_sim_time:=False
-  go2-nav:
-    profiles: ["nav"]
+  
+  nav:
+    image: enexis/go2:latest
     extends:
       service: common
       file: ../docker-compose.common.yml
-    container_name: go2-nav
-    image: enexis/go2:latest
     command:
       - /bin/bash 
       - -c
       - ros2 launch nav2 nav2.launch.py use_sim_time:=False
+  
+  septentrio:
+    image: enexis/go2:latest
+    extends:
+      service: common
+      file: ../docker-compose.common.yml
+    volumes:
+      - /dev:/dev:ro
+    depends_on:
+      platform_kit:
+        condition: service_healthy
+    command:
+          - /bin/bash 
+          - -c
+          - ros2 launch septentrio septentrio.launch.py path_to_config:=/workspace/install/septentrio/share/septentrio/config/rover.yaml
+
+  ntrip_client:
+    image: ntrip_client:latest
+    extends:
+      service: common
+      file: ../docker-compose.common.yml
+    volumes:
+      - /dev:/dev:ro
+      - ../../robotics_modules/platform_kits/enexis_go2/config:/config:ro
+    command: bnc --nw --conf /config/rtk_serial_link.bnc

@@ -1,56 +1,62 @@
 services: 
-  sim-go2:
+  platform_kit:
+    image: enexis/go2:latest
+    build:
+      context: ../../
+      dockerfile: Docker/enexis_go2/Dockerfile
+      target: go2
     extends:
       service: common
       file: ../docker-compose.common.yml
-    container_name: sim-go2
-    image: enexis/go2:latest
+    healthcheck:
+      test: ["CMD-SHELL", ". /opt/ros/jazzy/setup.sh && ros2 node list | grep -q /robot_state_publisher"]
+      interval: 2s
+      retries: 3
     command:
       - /bin/bash 
       - -c
       - ros2 launch enexis_go2 go2.launch.py use_sim_time:=True
   
-  sim-localization:
+  localization:
+    image: enexis/go2:latest
     extends:
       service: common
       file: ../docker-compose.common.yml
-    container_name: sim-localization
-    image: enexis/go2:latest
     command:
       - /bin/bash 
       - -c
-      - ros2 launch localization localization.launch.py start_ekf_local:=True use_sim_time:=True
-
-  sim-nav:
-    profiles: ["nav"]
+      - ros2 launch localization localization.launch.py use_sim_time:=True
+  nav:
+    image: enexis/go2:latest
     extends:
       service: common
       file: ../docker-compose.common.yml
-    container_name: sim-nav
-    image: enexis/go2:latest
     command:
       - /bin/bash 
       - -c
       - ros2 launch nav2 nav2.launch.py use_sim_time:=True
 
   rviz:
+    image: enexis/dev:latest
     extends:
       service: common
       file: ../docker-compose.common.yml
-    container_name: rviz
-    image: enexis/dev:latest
+    depends_on:
+      gazebo:
+        condition: service_healthy
     command:
       - /bin/bash
       - -c
       - ros2 run rviz2 rviz2 -d /workspace/src/platform_kits/enexis_go2/config/rviz.rviz --ros-args -p use_sim_time:=true
 
   gazebo:
+    image: enexis/dev:latest
     extends:
       service: common
       file: ../docker-compose.common.yml
-    container_name: gazebo
-    image: enexis/dev:latest
-    command:
-      - /bin/bash
-      - -c
-      - ros2 launch gazebo gazebo.launch.py world:=generated_world map_lat:=51.708924 map_lon:=5.299473
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", ". /opt/ros/jazzy/setup.sh && ros2 node list | grep -q /gzserver"]
+      interval: 2s
+      retries: 3
+    command: ros2 launch gazebo gazebo.launch.py world:=generated_world
