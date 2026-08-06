@@ -57,6 +57,10 @@ services:
     extends:
       service: common
       file: ../docker-compose.common.yml
+    healthcheck:
+      test: ["CMD-SHELL", ". /opt/ros/jazzy/setup.sh && ros2 node list | grep -q /livox_lidar_publisher"]
+      interval: 2s
+      retries: 20
     depends_on:
       platform_kit:
         condition: service_healthy
