@@ -25,7 +25,7 @@ services:
     command:
       - /bin/bash 
       - -c
-      - ros2 launch localization localization.launch.py start_ekf_local:=True use_sim_time:=False
+      - ros2 launch localization localization.launch.py start_ekf_local:=True start_ekf_global:=False start_navsat_transform:=False use_sim_time:=False
   
   nav:
     image: enexis/go2:latest
@@ -37,21 +37,6 @@ services:
       - -c
       - ros2 launch nav2 nav2.launch.py use_sim_time:=False
   
-  septentrio:
-    image: enexis/go2:latest
-    extends:
-      service: common
-      file: ../docker-compose.common.yml
-    volumes:
-      - /dev:/dev:ro
-    depends_on:
-      platform_kit:
-        condition: service_healthy
-    command:
-          - /bin/bash 
-          - -c
-          - ros2 launch septentrio septentrio.launch.py path_to_config:=/workspace/install/septentrio/share/septentrio/config/rover.yaml
-
   livox:
     image: enexis/go2:latest
     extends:
@@ -69,8 +54,25 @@ services:
       - -c
       - ros2 launch livox livox_mid360s.launch.py frame_id:=lidar_link
 
+  septentrio:
+    image: enexis/go2:latest
+    profiles: ["rtk"]
+    extends:
+      service: common
+      file: ../docker-compose.common.yml
+    volumes:
+      - /dev:/dev:ro
+    depends_on:
+      platform_kit:
+        condition: service_healthy
+    command:
+      - /bin/bash 
+      - -c
+      - ros2 launch septentrio septentrio.launch.py path_to_config:=/workspace/install/septentrio/share/septentrio/config/rover.yaml
+
   ntrip_client:
     image: ntrip_client:latest
+    profiles: ["rtk"]
     extends:
       service: common
       file: ../docker-compose.common.yml
