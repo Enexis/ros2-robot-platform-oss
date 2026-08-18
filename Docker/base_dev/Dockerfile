@@ -87,10 +87,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     default-jre
 
+# Install osm2sdf separately so its layer is only invalidated when osm2sdf itself changes
+COPY utilities/osm2sdf /$WORKDIR/utilities/osm2sdf/
+RUN /$WORKDIR/utilities/osm2sdf/osm2sdf_install.sh -g
+
 # Copy all modules so we only have to build once
 COPY robotics_modules /$WORKDIR/src/
 COPY utilities /$WORKDIR/utilities/
-RUN /$WORKDIR/utilities/osm2sdf/osm2sdf_install.sh -g
 RUN echo 'export PYTHONPATH=$PYTHONPATH:/workspace' >> ~/.bashrc
 
 # Setup workspace directory
