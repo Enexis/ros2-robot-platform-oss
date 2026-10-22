@@ -27,10 +27,17 @@ def generate_launch_description():
             )
         ),
         launch_arguments={
-            "use_sim_time": "True",
+            "use_sim_time": LaunchConfiguration("use_sim_time"),
             "params_file": nav2_params,
             "autostart": "True",
         }.items(),
     )
 
-    return LaunchDescription([navigation2_cmd])
+    return LaunchDescription([
+        DeclareLaunchArgument(
+            "use_sim_time",
+            default_value="True",
+            description="Use simulation clock if true.",
+        ),
+        navigation2_cmd,
+    ])
