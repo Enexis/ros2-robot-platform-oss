@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from launch import LaunchDescription, LaunchContext
+from launch import LaunchDescription
 from launch.substitutions import LaunchConfiguration
 from launch.actions import DeclareLaunchArgument
-from launch_ros.actions import ComposableNodeContainer, Node
+from launch_ros.actions import ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
 
 
@@ -48,22 +48,8 @@ def generate_launch_description():
         output='screen',
     )
 
-    pointclod_to_laserscan_cmd = Node(
-        package='pointcloud_to_laserscan',
-        executable='pointcloud_to_laserscan_node',
-        name='pointcloud_to_laserscan',
-        namespace=namespace,
-        output='screen',
-        remappings=[
-            ("cloud_in", "pointcloud"),
-            ("scan", "scan"),
-        ],
-        parameters=[{"target_frame": "base_link", "max_height": 0.5}],
-    )
-
     ld = LaunchDescription()
     ld.add_action(declare_namespace)
     ld.add_action(container)
-    ld.add_action(pointclod_to_laserscan_cmd)
 
     return ld
