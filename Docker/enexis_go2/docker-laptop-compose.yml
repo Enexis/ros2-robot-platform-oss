@@ -1,0 +1,31 @@
+name: enexis_laptop
+
+services:
+  rviz:
+    image: enexis/dev:latest
+    extends:
+      service: common
+      file: ../docker-compose.common.yml
+    environment:
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
+    healthcheck:
+      test: ["CMD-SHELL", ". /opt/ros/jazzy/setup.sh && ros2 node list | grep -Fx /rviz > /dev/null"]
+      interval: 5s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    command:
+      - /bin/bash
+      - -c
+      - ros2 run rviz2 rviz2 -d /workspace/src/platform_kits/enexis_go2/config/rviz.rviz --ros-args -p use_sim_time:=false
+
+  tools:
+    image: enexis/dev:latest
+    extends:
+      service: common
+      file: ../docker-compose.common.yml
+    environment:
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
+    healthcheck:
+      test: ["NONE"]
+    command: ["tail", "-f", "/dev/null"]

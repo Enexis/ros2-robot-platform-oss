@@ -144,6 +144,59 @@ Notes:
 
 ---
 
+## Laptop operator tools
+
+Use this setup to visualize and command the real robot from a laptop without
+starting duplicate hardware drivers, localization, navigation, or Gazebo.
+The onboard robot stack must run separately. Stop any simulation or hardware
+stack running on the laptop before connecting to the robot.
+
+Select the laptop DDS configuration in `Docker/.env` and ensure the interface in
+`cyclonedds/cyclonedds_laptop.xml` connects to the robot's network. DDS discovery
+and traffic must be permitted between the machines. Match the robot's
+`ROS_DOMAIN_ID` (default `0`); export it in the host terminal before starting
+this stack if the robot uses a different domain.
+
+From the repository root, start RViz and the tools container:
+
+```bash
+docker compose -f Docker/enexis_go2/docker-laptop-compose.yml up -d
+```
+
+Both services use the existing `enexis/dev:latest` image. If needed, build it
+first with `docker compose -f Docker/base_dev/docker-compose.yml build enexis-dev`.
+RViz uses real time and the configuration baked into the image, not a source
+volume. The stack has its own Compose project name, `enexis_laptop`.
+
+Open a ROS tools shell and verify discovery:
+
+```bash
+docker compose -f Docker/enexis_go2/docker-laptop-compose.yml exec tools bash
+ros2 node list
+ros2 topic list
+```
+
+For keyboard control, run this inside the tools shell:
+
+```bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard \
+  --ros-args -p speed:=0.2 -p turn:=0.5
+```
+
+Teleop publishes `geometry_msgs/Twist` on `/cmd_vel` by default. Confirm this
+matches the robot's command topic before use. Keep the terminal focused:
+`i` moves forward, `,` backward, `j`/`l` turn, and `k` stops.
+Press `k` before exiting with `Ctrl+C`. Do not run keyboard control concurrently
+with navigation goals or other velocity command publishers. Teleop does not
+start automatically.
+
+RViz can send goals with its 2D Goal Pose tool when onboard navigation and
+localization are operational. To stop the laptop services:
+
+```bash
+docker compose -f Docker/enexis_go2/docker-laptop-compose.yml down
+```
+
 ## Main Launch Files
 
 - `go2_bringup/launch/go2.launch.py`
