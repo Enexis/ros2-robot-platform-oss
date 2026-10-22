@@ -201,7 +201,7 @@ docker compose -f Docker/enexis_go2/docker-laptop-compose.yml down
 
 - `go2_bringup/launch/go2.launch.py`
 	- launches `go2_description`, `go2_driver`, optional `go2_rviz`
-  - args: `rviz` (`True/False`), `livox` (`True/False`), `lidar` and `realsense` (reserved)
+  - args: `namespace`, `rviz`
 - `go2_description/launch/robot.launch.py`
 	- publishes `robot_state_publisher` from URDF/Xacro
 - `go2_driver/launch/go2_driver.launch.py`
@@ -216,6 +216,10 @@ docker compose -f Docker/enexis_go2/docker-laptop-compose.yml down
 - default cloud topic is `livox/lidar` (native Livox topic)
 - update Livox network settings in `robotics_modules/sensors/livox/config/MID360s_config.json`
 - Docker service: `Docker/enexis_go2/docker-compose.yml` -> `livox`
+- The platform launch does not start the Livox driver; the separate Docker
+  service owns it. In hardware mode (`use_sim_time:=False`), the platform launch
+  converts `/livox/lidar` to `/scan` with node `/livox_pc2l_scan`. In simulation,
+  this converter is disabled because Gazebo supplies `/scan`.
 
 ---
 
