@@ -25,7 +25,27 @@ services:
     command:
       - /bin/bash 
       - -c
-      - ros2 launch localization localization.launch.py use_sim_time:=True
+      - ros2 launch localization localization.launch.py use_sim_time:=True start_ekf_local:=True start_ekf_global:=False start_navsat_transform:=False
+  slam:
+    profiles: ["mapping"]
+    image: enexis/go2:latest
+    extends:
+      service: common
+      file: ../docker-compose.common.yml
+    depends_on:
+      gazebo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", ". /opt/ros/jazzy/setup.sh && ros2 lifecycle get /slam_toolbox | grep -Fx 'active [3]' > /dev/null"]
+      interval: 5s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    command:
+      - /bin/bash
+      - -c
+      - ros2 launch slam_toolbox online_async_launch.py use_sim_time:=true slam_params_file:=/workspace/install/nav2/share/nav2/config/slam_sim.yaml
+
   nav:
     image: enexis/go2:latest
     extends:

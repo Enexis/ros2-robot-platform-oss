@@ -144,6 +144,101 @@ Notes:
 
 ---
 
+## Optional simulation mapping
+
+This mode follows the [Nav2 mapping and localization guide](https://docs.nav2.org/rolling/configuration_and_development/first_time_robot_setup_guide/sensors/mapping_localization/)
+using the SLAM Toolbox asynchronous mapping launch provided by ROS 2 Jazzy.
+It uses the simulated `/scan` (360 degrees, 10 Hz, 12 m maximum range).
+The local EKF supplies `odom -> base_footprint`, robot state publisher supplies
+the sensor transforms, and SLAM Toolbox supplies `/map` and `map -> odom`.
+The simulation runs only the local EKF; the global EKF and GPS transform node
+are disabled to avoid competing `map -> odom` publishers when SLAM starts.
+Without SLAM, there is no global localization: use fixed frame `odom` in RViz,
+and do not send map-frame navigation goals. The hardware setup is unchanged.
+
+Build the Go2 image to include the mapping configuration and dependency:
+
+```bash
+docker compose -f Docker/enexis_go2/docker-compose.yml build
+```
+
+Start the simulation with local localization, then start SLAM when needed:
+
+```bash
+docker compose -f Docker/enexis_go2/docker-sim-compose.yml up -d
+docker compose -f Docker/enexis_go2/docker-sim-compose.yml up -d slam
+```
+
+SLAM has the `mapping` profile and is not started by the normal `up` command.
+Explicitly targeting `slam` starts it without needing to specify a profile.
+Alternatively, use `--profile mapping up -d` to start everything including SLAM.
+There is no separate mapping Compose file.
+
+Do not run this alongside real-robot services in the same ROS domain.
+The default RViz configuration enables a **Map** display on `/map` with
+**Transient Local** durability and fixed frame `map`. Rebuild `enexis/dev:latest`
+and recreate RViz after changing its baked-in configuration. Add a **LaserScan**
+display on `/scan` to see incoming measurements.
+The default configuration includes the **SLAM Toolbox** panel
+(`slam_toolbox::SlamToolboxPlugin`) for pausing measurements, saving maps, and serializing
+or loading pose graphs. Saved paths refer to the SLAM container's filesystem;
+copy outputs to the host before removing that container. The panel is not
+a replacement for ROS lifecycle tools such as `ros2 lifecycle get /slam_toolbox`.
+Nav2's existing rolling costmaps are unchanged by this mode;
+this does not add a static map layer or saved-map/AMCL localization.
+
+Verify mapping from a container:
+
+```bash
+docker compose -f Docker/enexis_go2/docker-sim-compose.yml exec slam bash
+ros2 lifecycle get /slam_toolbox
+ros2 topic echo /map --once --field info
+ros2 run tf2_ros tf2_echo map base_footprint
+```
+
+Explore using keyboard teleop in a second host terminal:
+
+```bash
+docker compose -f Docker/enexis_go2/docker-sim-compose.yml exec gazebo \
+  ros2 run teleop_twist_keyboard teleop_twist_keyboard \
+  --ros-args -p speed:=0.2 -p turn:=0.5
+```
+
+Do not send navigation goals at the same time as teleop. Stop the robot with
+`k` before leaving teleop. Drive slowly near visible structures to provide scan
+matching features; the occupancy map grows as new areas are observed.
+
+To save the occupancy map, run inside the SLAM container:
+
+```bash
+ros2 run nav2_map_server map_saver_cli -f /tmp/simulation_map \
+  --ros-args -p use_sim_time:=true -p map_subscribe_transient_local:=true
+```
+
+Copy both files to the host before removing the container:
+
+```bash
+docker compose -f Docker/enexis_go2/docker-sim-compose.yml cp slam:/tmp/simulation_map.yaml ./simulation_map.yaml
+docker compose -f Docker/enexis_go2/docker-sim-compose.yml cp slam:/tmp/simulation_map.pgm ./simulation_map.pgm
+```
+
+These files are an occupancy map, not a serialized SLAM pose graph.
+Stop only SLAM while leaving local localization and the simulator running:
+
+```bash
+docker compose -f Docker/enexis_go2/docker-sim-compose.yml stop slam
+```
+
+The `map -> odom` transform stops updating when SLAM stops. Switch RViz's fixed
+frame to `odom` for local visualization. Start SLAM again with `up -d slam`;
+each new SLAM process starts a new mapping session unless a pose graph is loaded.
+Running normal `up -d` does not stop an already running SLAM service.
+To stop and remove the entire stack, including SLAM:
+
+```bash
+docker compose -f Docker/enexis_go2/docker-sim-compose.yml --profile mapping down
+```
+
 ## Main Launch Files
 
 - `go2_bringup/launch/go2.launch.py`
