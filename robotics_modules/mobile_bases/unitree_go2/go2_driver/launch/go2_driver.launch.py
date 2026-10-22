@@ -44,6 +44,7 @@ def generate_launch_description():
         namespace=namespace,
         package='rclcpp_components',
         executable='component_container',
+        ros_arguments=['--log-level', 'rmw_cyclonedds_cpp:=error'],
         composable_node_descriptions=composable_nodes,
         output='screen',
     )

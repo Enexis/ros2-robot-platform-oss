@@ -66,6 +66,7 @@ def launch_setup(context: LaunchContext) -> list:
         executable="pointcloud_to_laserscan_node",
         name="livox_pc2l_scan",
         output="screen",
+        ros_arguments=["--log-level", "rmw_cyclonedds_cpp:=error"],
         parameters=[{
             "target_frame": "base_footprint",
             "transform_tolerance": 0.1,

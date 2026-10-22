@@ -33,6 +33,7 @@ def launch_setup(context: LaunchContext) -> list:
         name='robot_state_publisher',
         namespace=namespace,
         output='screen',
+        ros_arguments=['--log-level', 'rmw_cyclonedds_cpp:=error'],
         parameters=[{
             'use_sim_time': use_sim_time,
             'robot_description': robot_description,
@@ -87,4 +88,3 @@ def generate_launch_description() -> LaunchDescription:
     )
 
     return LaunchDescription(declared_arguments +[OpaqueFunction(function=launch_setup)])
-
