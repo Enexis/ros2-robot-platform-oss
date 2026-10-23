@@ -117,6 +117,20 @@ For Jetson, set interface names in `cyclonedds/cyclonedds_jetson.xml` to match t
 - `en*` = Ethernet interface connected to the Unitree Go2 embedded computer
 - `wl*` = wireless interface on the Jetson
 
+`cyclonedds_jetson.xml` requests a 10 MB DDS socket receive buffer, so large
+messages such as `/livox/lidar` (about 0.5 MB) are not lost in fragments. Allow
+this once on the Jetson host before you start the containers; otherwise every
+ROS node fails with `failed to increase socket receive buffer size`:
+
+```bash
+sudo tee /etc/sysctl.d/10-cyclone-max.conf <<'EOF'
+net.core.rmem_max=2147483647
+net.ipv4.ipfrag_time=3
+net.ipv4.ipfrag_high_thresh=134217728
+EOF
+sudo sysctl --system
+```
+
 For laptop usage, set the interface names in `cyclonedds/cyclonedds_laptop.xml` to match your host network adapters.
 
 ### 3) Build image and start container
@@ -296,6 +310,12 @@ For day-to-day development inside the container, this workspace uses short alias
 - Check `CYCLONEDDS_URI` points to a valid XML file.
 - Verify XML network interface names match actual interfaces.
 - Open UDP ports used by DDS discovery (commonly in `7400-7600` range).
+
+### `/scan` stops while `/livox/lidar` still publishes
+
+The converter drops a point cloud when one of its UDP fragments is lost. Check
+`awk '/^Udp:/{getline; print $6}' /proc/net/snmp` (UDP `RcvbufErrors`) twice;
+if it increases, apply the Jetson sysctl settings from Quick Start step 2.
 
 Windows firewall example (PowerShell as Administrator):
 
