@@ -78,11 +78,43 @@ def launch_setup(context: LaunchContext) -> list:
             "range_min": 0.3,
             "range_max": 30.0,
         }],
-        remappings=[("cloud_in", "livox/lidar"), ("scan", "scan")],
+        remappings=[("cloud_in", "livox/lidar"), ("scan", "scan_unfiltered")],
         condition=UnlessCondition(LaunchConfiguration("use_sim_time")),
     )
 
-    return [robot_description_cmd, rviz_cmd, pc_to_scan_node]
+    # Removes returns from the lidar protection mount (within ~7 cm of the
+    # lidar) so they do not show up as obstacles in the costmaps.
+    scan_filter_node = Node(
+        package="laser_filters",
+        executable="scan_to_scan_filter_chain",
+        name="livox_scan_filter",
+        output="screen",
+        ros_arguments=["--log-level", "rmw_cyclonedds_cpp:=error"],
+        parameters=[{
+            "filter1": {
+                "name": "lidar_mount_box",
+                "type": "laser_filters/LaserScanBoxFilter",
+                "params": {
+                    # /scan lies in the base_footprint ground plane, 0.12 m
+                    # below the lidar, so the box is tall in z. The 17 deg
+                    # lidar pitch shifts those points ~3.5 cm forward in
+                    # lidar_link, so x -0.06..0.14 keeps ~10 cm around the lidar.
+                    "box_frame": "lidar_link",
+                    "min_x": -0.06,
+                    "max_x": 0.14,
+                    "min_y": -0.10,
+                    "max_y": 0.10,
+                    "min_z": -0.5,
+                    "max_z": 0.5,
+                    "invert": False,
+                },
+            },
+        }],
+        remappings=[("scan", "scan_unfiltered"), ("scan_filtered", "scan")],
+        condition=UnlessCondition(LaunchConfiguration("use_sim_time")),
+    )
+
+    return [robot_description_cmd, rviz_cmd, pc_to_scan_node, scan_filter_node]
 
 
 def generate_launch_description() -> LaunchDescription:

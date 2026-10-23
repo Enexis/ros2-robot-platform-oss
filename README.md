@@ -226,8 +226,11 @@ This hides the "Failed to parse type hash" warnings for Unitree DDS topics, but 
 - Docker service: `Docker/enexis_go2/docker-compose.yml` -> `livox`
 - The platform launch does not start the Livox driver; the separate Docker
   service owns it. In hardware mode (`use_sim_time:=False`), the platform launch
-  converts `/livox/lidar` to `/scan` with node `/livox_pc2l_scan`. In simulation,
-  this converter is disabled because Gazebo supplies `/scan`.
+  converts `/livox/lidar` to `/scan_unfiltered` with node `/livox_pc2l_scan`.
+  Node `/livox_scan_filter` (`laser_filters` box filter) then removes the returns
+  from the lidar protection mount (box around `lidar_link`, about ±10 cm in the
+  scan plane) and publishes `/scan`. In simulation, both nodes are
+  disabled because Gazebo supplies `/scan`.
 
 ---
 
