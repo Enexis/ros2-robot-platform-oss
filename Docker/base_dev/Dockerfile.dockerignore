@@ -1,0 +1,9 @@
+# Build context for Docker/base_dev/Dockerfile
+*
+!Docker/entrypoint.sh
+!robotics_modules
+!utilities
+**/__pycache__
+**/build
+**/install
+**/log
