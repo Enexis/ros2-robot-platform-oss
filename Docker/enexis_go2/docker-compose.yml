@@ -15,7 +15,7 @@ services:
     command:
       - /bin/bash 
       - -c
-      - ros2 launch enexis_go2 go2.launch.py use_sim_time:=False
+      - exec ros2 launch enexis_go2 go2.launch.py use_sim_time:=False 2> >(grep --line-buffered -v 'Failed to parse type hash' >&2)
   
   localization:
     image: enexis/go2:latest
@@ -25,7 +25,7 @@ services:
     command:
       - /bin/bash 
       - -c
-      - ros2 launch localization localization.launch.py start_ekf_local:=True start_ekf_global:=False start_navsat_transform:=False use_sim_time:=False
+      - exec ros2 launch localization localization.launch.py start_ekf_local:=True start_ekf_global:=False start_navsat_transform:=False use_sim_time:=False 2> >(grep --line-buffered -v 'Failed to parse type hash' >&2)
   
   nav:
     image: enexis/go2:latest
@@ -35,7 +35,7 @@ services:
     command:
       - /bin/bash 
       - -c
-      - ros2 launch nav2 nav2.launch.py use_sim_time:=False
+      - exec ros2 launch nav2 nav2.launch.py use_sim_time:=False 2> >(grep --line-buffered -v 'Failed to parse type hash' >&2)
   
   livox:
     image: enexis/go2:latest
@@ -52,7 +52,7 @@ services:
     command:
       - /bin/bash
       - -c
-      - ros2 launch livox livox_mid360s.launch.py frame_id:=lidar_link
+      - exec ros2 launch livox livox_mid360s.launch.py frame_id:=lidar_link 2> >(grep --line-buffered -v 'Failed to parse type hash' >&2)
 
   septentrio:
     image: enexis/go2:latest
@@ -68,7 +68,7 @@ services:
     command:
       - /bin/bash 
       - -c
-      - ros2 launch septentrio septentrio.launch.py path_to_config:=/workspace/install/septentrio/share/septentrio/config/rover.yaml
+      - exec ros2 launch septentrio septentrio.launch.py path_to_config:=/workspace/install/septentrio/share/septentrio/config/rover.yaml 2> >(grep --line-buffered -v 'Failed to parse type hash' >&2)
 
   ntrip_client:
     image: ntrip_client:latest

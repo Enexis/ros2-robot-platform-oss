@@ -206,6 +206,7 @@ Simulated time requires an active `/clock` publisher for costmap updates.
 
 All robot nodes (platform, Livox, localization, Nav2) start with `--log-level rmw_cyclonedds_cpp:=error`.
 This hides the "Failed to parse type hash" warnings for Unitree DDS topics, but also every other Cyclone DDS warning.
+The `ros2 launch` process has its own node that this flag cannot reach, so the robot compose commands also filter that exact line from stderr.
 
 - `go2_bringup/launch/go2.launch.py`
 	- launches `go2_description`, `go2_driver`, optional `go2_rviz`
