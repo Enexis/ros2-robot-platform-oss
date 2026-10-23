@@ -30,6 +30,8 @@ def generate_launch_description():
             "use_sim_time": LaunchConfiguration("use_sim_time"),
             "params_file": nav2_params,
             "autostart": "True",
+            # Hide Cyclone DDS warnings about Unitree endpoints without ROS type hashes.
+            "log_level": "rmw_cyclonedds_cpp:=error",
         }.items(),
     )
 

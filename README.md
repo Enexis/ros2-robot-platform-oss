@@ -199,6 +199,14 @@ docker compose -f Docker/enexis_go2/docker-laptop-compose.yml down
 
 ## Main Launch Files
 
+The `nav2` package's `nav2.launch.py` forwards `use_sim_time` to Nav2.
+Hardware Compose sets it to `False`; simulation Compose sets it to `True`.
+Direct launches default to `True`, so pass `use_sim_time:=False` on hardware.
+Simulated time requires an active `/clock` publisher for costmap updates.
+
+All robot nodes (platform, Livox, localization, Nav2) start with `--log-level rmw_cyclonedds_cpp:=error`.
+This hides the "Failed to parse type hash" warnings for Unitree DDS topics, but also every other Cyclone DDS warning.
+
 - `go2_bringup/launch/go2.launch.py`
 	- launches `go2_description`, `go2_driver`, optional `go2_rviz`
   - args: `namespace`, `rviz`
