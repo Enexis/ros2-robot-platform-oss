@@ -70,8 +70,10 @@ def launch_setup(context: LaunchContext) -> list:
         parameters=[{
             "target_frame": "base_footprint",
             "transform_tolerance": 0.1,
-            "min_height": 0.05,
-            "max_height": 0.45,
+            # base_footprint sits at body height, ~0.30 m above the ground
+            # when standing, so this keeps points 0.05-0.45 m above the ground.
+            "min_height": -0.25,
+            "max_height": 0.15,
             "angle_min": -3.14159,
             "angle_max": 3.14159,
             "scan_time": 0.05,
@@ -95,15 +97,17 @@ def launch_setup(context: LaunchContext) -> list:
                 "name": "lidar_mount_box",
                 "type": "laser_filters/LaserScanBoxFilter",
                 "params": {
-                    # /scan lies in the base_footprint ground plane, 0.12 m
+                    # /scan lies in the base_footprint plane, 0.12 m
                     # below the lidar, so the box is tall in z. The 17 deg
                     # lidar pitch shifts those points ~3.5 cm forward in
-                    # lidar_link, so x -0.06..0.14 keeps ~10 cm around the lidar.
+                    # lidar_link. The mount shows up at about +-45 deg and up to
+                    # 16 cm from the lidar, so the box covers ~16 cm ahead and
+                    # 15 cm to each side.
                     "box_frame": "lidar_link",
                     "min_x": -0.06,
-                    "max_x": 0.14,
-                    "min_y": -0.10,
-                    "max_y": 0.10,
+                    "max_x": 0.19,
+                    "min_y": -0.15,
+                    "max_y": 0.15,
                     "min_z": -0.5,
                     "max_z": 0.5,
                     "invert": False,
