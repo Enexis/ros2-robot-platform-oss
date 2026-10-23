@@ -302,7 +302,7 @@ local_costmap:
   local_costmap:
     ros__parameters:
       # hardcoded unitree go2 footprint.
-      footprint: "[[0.42, 0.32], [0.42, -0.32], [-0.42, -0.32], [-0.42, 0.32]]"
+      footprint: "[[0.36, 0.17], [0.36, -0.17], [-0.36, -0.17], [-0.36, 0.17]]"
       footprint_padding: 0.02
       robot_base_frame: base_footprint
 
@@ -316,8 +316,8 @@ local_costmap:
       plugins: ["voxel_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.55
+        cost_scaling_factor: 5.0
+        inflation_radius: 0.45
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: True
@@ -346,7 +346,7 @@ global_costmap:
     ros__parameters:
       # hardcoded unitree go2 footprint.
       robot_base_frame: base_footprint
-      footprint: "[[0.42, 0.32], [0.42, -0.32], [-0.42, -0.32], [-0.42, 0.32]]"
+      footprint: "[[0.36, 0.17], [0.36, -0.17], [-0.36, -0.17], [-0.36, 0.17]]"
       footprint_padding: 0.02
 
       update_frequency: 1.0
@@ -382,8 +382,8 @@ global_costmap:
           inf_is_valid: true
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.55
+        cost_scaling_factor: 5.0
+        inflation_radius: 0.45
       always_send_full_costmap: True
 
 # The yaml_filename does not need to be specified since it going to be set by defaults in launch.
