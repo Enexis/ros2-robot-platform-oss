@@ -1,0 +1,11 @@
+# Build context for Docker/enexis_go2/Dockerfile: only the packages it copies
+*
+!robotics_modules/platform_kits/enexis_go2
+!robotics_modules/mobile_bases/unitree_go2
+!robotics_modules/sensors/sim_gnss
+!robotics_modules/sensors/sim_lidar
+!robotics_modules/sensors/septentrio
+!robotics_modules/sensors/livox
+!robotics_modules/ros2_control/localization
+!robotics_modules/ros2_control/nav2
+**/__pycache__

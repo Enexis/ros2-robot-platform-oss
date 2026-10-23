@@ -41,6 +41,15 @@ COPY ./Docker/entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 
 ###########################################
+# Package manifests only. The dev rosdep layer mounts these, so it is
+# reused until a package.xml changes instead of on every source change.
+###########################################
+FROM base AS manifests
+COPY robotics_modules /tmp/src
+RUN mkdir /manifests && cd /tmp/src && \
+    find . -name package.xml -exec cp --parents {} /manifests/ \;
+
+###########################################
 # Dev image with development tools
 ###########################################
 FROM base AS dev
@@ -91,20 +100,35 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY utilities/osm2sdf /$WORKDIR/utilities/osm2sdf/
 RUN /$WORKDIR/utilities/osm2sdf/osm2sdf_install.sh -g
 
-# Copy all modules so we only have to build once
-COPY robotics_modules /$WORKDIR/src/
-COPY utilities /$WORKDIR/utilities/
 RUN echo 'export PYTHONPATH=$PYTHONPATH:/workspace' >> ~/.bashrc
 
 # Setup workspace directory
 WORKDIR /$WORKDIR
 
-# Update package lists and install dependencies and build
-RUN apt-get update \
-    && . /opt/ros/${ROS_DISTRO}/setup.sh \
-    && rosdep install --from-paths src --ignore-src -r -y \
-    && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Debug
-  
+# System dependencies of all packages, resolved from their package.xml files only.
+# Reused until a package.xml changes instead of on every source change.
+RUN --mount=type=bind,from=manifests,source=/manifests,target=/tmp/manifests \
+    apt-get update && \
+    . /opt/ros/${ROS_DISTRO}/setup.sh && \
+    rosdep install --from-paths /tmp/manifests --ignore-src -r -y
+
+# Compiled packages that change rarely
+COPY robotics_modules/application_control /$WORKDIR/src/application_control/
+COPY robotics_modules/mobile_bases /$WORKDIR/src/mobile_bases/
+COPY robotics_modules/sensors /$WORKDIR/src/sensors/
+RUN . /opt/ros/${ROS_DISTRO}/setup.sh && \
+    colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Debug
+
+# Launch/config packages that change often; a change here only rebuilds this layer
+COPY robotics_modules/platform_kits /$WORKDIR/src/platform_kits/
+COPY robotics_modules/ros2_control /$WORKDIR/src/ros2_control/
+COPY robotics_modules/visualization /$WORKDIR/src/visualization/
+RUN . /opt/ros/${ROS_DISTRO}/setup.sh && \
+    colcon build --symlink-install --packages-skip-build-finished --cmake-args -DCMAKE_BUILD_TYPE=Debug
+
+# Not needed by the colcon build; copied last so changes here do not rebuild the workspace
+COPY utilities /$WORKDIR/utilities/
+
     # Add argcomplete for ROS2 and colcon
     RUN echo "eval \"$(/usr/bin/register-python-argcomplete3 ros2)\"" >> ~/.bashrc \
     && echo "eval \"$(/usr/bin/register-python-argcomplete3 colcon)\"" >> ~/.bashrc
