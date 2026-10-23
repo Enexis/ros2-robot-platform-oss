@@ -33,6 +33,7 @@ def launch_setup(context: LaunchContext) -> list:
             {"use_sim_time": LaunchConfiguration("use_sim_time")},
         ],
         remappings=[("odometry/filtered", "odometry/local")],
+        ros_arguments=["--log-level", "rmw_cyclonedds_cpp:=error"],
         condition=IfCondition(LaunchConfiguration("start_ekf_local")),
     )
 
@@ -46,6 +47,7 @@ def launch_setup(context: LaunchContext) -> list:
             {"use_sim_time": LaunchConfiguration("use_sim_time")},
         ],
         remappings=[("odometry/filtered", "odometry/global")],
+        ros_arguments=["--log-level", "rmw_cyclonedds_cpp:=error"],
         condition=IfCondition(LaunchConfiguration("start_ekf_global")),
     )
 
@@ -66,6 +68,7 @@ def launch_setup(context: LaunchContext) -> list:
             # ('gps/filtered', 'gps/filtered'),
             # ('odometry/gps', 'odometry/gps'),
         ],
+        ros_arguments=["--log-level", "rmw_cyclonedds_cpp:=error"],
         condition=IfCondition(LaunchConfiguration("start_navsat_transform")),
     )
 

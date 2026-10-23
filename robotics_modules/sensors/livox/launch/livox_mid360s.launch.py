@@ -52,6 +52,7 @@ def generate_launch_description() -> LaunchDescription:
                 executable="livox_ros_driver2_node",
                 name="livox_lidar_publisher",
                 output="screen",
+                ros_arguments=["--log-level", "rmw_cyclonedds_cpp:=error"],
                 parameters=[
                     {"xfer_format": 0},
                     {
