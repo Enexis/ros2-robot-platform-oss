@@ -41,7 +41,7 @@ services:
     command:
       - /bin/bash 
       - -c
-      - exec ros2 launch nav2 go2_navigation.launch.py mode:="$$NAV_MODE" $${MAP_NAME:+"map_name:=$$MAP_NAME"} maps_dir:=/maps use_sim_time:=False
+      - exec ros2 launch nav2 go2_navigation.launch.py mode:="$$NAV_MODE" $${MAP_NAME:+"map_name:=$$MAP_NAME"} maps_dir:=/maps use_sim_time:=False > >(grep --line-buffered -v 'Failed to parse type hash') 2>&1
   
   livox:
     image: enexis/go2:latest
