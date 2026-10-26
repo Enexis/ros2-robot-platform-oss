@@ -229,12 +229,11 @@ docker compose -f Docker/enexis_go2/docker-laptop-compose.yml down
 ```
 
 The laptop RViz uses the existing `rviz.rviz` view, with the supported SLAM
-Toolbox and Nav2 panels and an additional `/map` occupancy-map display.
-All previous displays, tools, and display enable states are preserved.
-The default fixed frame remains `odom` for use without map localization.
-For mapping and saved-map navigation, select `map` under **Global Options ->
-Fixed Frame** once the selected mode supplies the `map -> odom` transform,
-before setting an initial pose or sending a navigation goal.
+Toolbox and Nav2 panels, a `/map` occupancy-map display, and an **AMCL Pose**
+display (`/amcl_pose`, with covariance). The fixed frame is `map`, so the
+robot and scan only appear once mapping or localization publishes
+`map -> odom`. Without a running `nav` mode, select `odom` under
+**Global Options -> Fixed Frame**.
 RViz does not start mapping, localization, or navigation on the robot.
 
 ## Physical Go2 mapping and localization
