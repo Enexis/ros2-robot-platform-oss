@@ -29,13 +29,19 @@ services:
   
   nav:
     image: enexis/go2:latest
+    profiles: ["navigation"]
     extends:
       service: common
       file: ../docker-compose.common.yml
+    environment:
+      NAV_MODE: ${NAV_MODE:-}
+      MAP_NAME: ${MAP_NAME:-}
+    volumes:
+      - ${GO2_MAPS_DIR:-${HOME}/go2_maps}:/maps
     command:
       - /bin/bash 
       - -c
-      - ros2 launch nav2 nav2.launch.py use_sim_time:=False
+      - exec ros2 launch nav2 go2_navigation.launch.py mode:="$$NAV_MODE" $${MAP_NAME:+"map_name:=$$MAP_NAME"} maps_dir:=/maps use_sim_time:=False
   
   livox:
     image: enexis/go2:latest
