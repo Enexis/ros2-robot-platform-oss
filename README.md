@@ -131,7 +131,11 @@ EOF
 sudo sysctl --system
 ```
 
-For laptop usage, set the interface names in `cyclonedds/cyclonedds_laptop.xml` to match your host network adapters.
+For laptop usage, `cyclonedds/cyclonedds_laptop.xml` automatically selects a network
+adapter when each ROS process starts. Restart the laptop containers after changing
+network connections. With multiple active adapters, Cyclone DDS can select a
+network that does not reach the robot. In that case, replace `autodetermine="true"`
+with `name="<robot-network-interface>"` in the laptop profile.
 
 ### 3) Build image and start container
 
@@ -165,8 +169,9 @@ starting duplicate hardware drivers, localization, navigation, or Gazebo.
 The onboard robot stack must run separately. Stop any simulation or hardware
 stack running on the laptop before connecting to the robot.
 
-Select the laptop DDS configuration in `Docker/.env` and ensure the interface in
-`cyclonedds/cyclonedds_laptop.xml` connects to the robot's network. DDS discovery
+Select the laptop DDS configuration in `Docker/.env`. The laptop profile selects
+an adapter automatically; if it selects the wrong network, set an explicit
+interface name as described in Quick Start step 2. DDS discovery
 and traffic must be permitted between the machines. Match the robot's
 `ROS_DOMAIN_ID` (default `0`); export it in the host terminal before starting
 this stack if the robot uses a different domain.
