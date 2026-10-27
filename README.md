@@ -229,18 +229,19 @@ docker compose -f Docker/enexis_go2/docker-laptop-compose.yml down
 ```
 
 The laptop RViz uses the existing `rviz.rviz` view, with the supported SLAM
-Toolbox and Nav2 panels, a `/map` occupancy-map display, and an **AMCL Pose**
-display (`/amcl_pose`, with covariance). The fixed frame is `map`, so the
-robot and scan only appear once mapping or localization publishes
-`map -> odom`. Without a running `nav` mode, select `odom` under
+Toolbox and Nav2 panels, the **Go2 Nav Mode** panel, a `/map` occupancy-map
+display, and an **AMCL Pose** display (`/amcl_pose`, with covariance). The
+fixed frame is `map`, so the robot and scan only appear once mapping or
+localization publishes `map -> odom`. In Idle mode, select `odom` under
 **Global Options -> Fixed Frame**.
-RViz does not start mapping, localization, or navigation on the robot.
+RViz itself does not run mapping, localization, or navigation; the Go2 Nav
+Mode panel only asks the robot's mode manager to switch modes.
 
 ## Physical Go2 mapping and localization
 
 Rebuild the robot image on the Jetson and the developer image on the laptop
-after updating this repository so the installed launch files, dependencies,
-and RViz configuration are current:
+after updating this repository so the installed launch files, mode manager,
+interfaces, RViz panel, and RViz configuration are current:
 
 ```bash
 # Jetson
@@ -249,67 +250,117 @@ docker compose -f Docker/enexis_go2/docker-compose.yml build platform_kit
 docker compose -f Docker/base_dev/docker-compose.yml build enexis-dev
 ```
 
-The physical workflow uses the existing `/scan` and local EKF
-`odom -> base_footprint` transform. Start the robot platform, local EKF, and
-Livox services as usual; the separate `nav` service is now opt-in so that no
-map mode starts without an explicit operator selection:
-
-```bash
-docker compose -f Docker/enexis_go2/docker-compose.yml up -d \
-  platform_kit localization livox
-```
-
-Maps are stored on the Jetson host and mounted into the navigation container
+Maps are stored on the Jetson host and mounted into the `nav` container
 at `/maps`. The default host directory is `$HOME/go2_maps`; to select another
 directory, export `GO2_MAPS_DIR` before using Compose. Create the host
-directory once before starting the `nav` service:
+directory once before starting the stack:
 
 ```bash
 mkdir -p "${GO2_MAPS_DIR:-$HOME/go2_maps}"
 ```
 
-Select the mode explicitly on every start. Only localization requires
-`MAP_NAME`, a saved YAML basename limited to ASCII letters, digits, `_` and
-`-` (without the `.yaml` extension). Mapping does not require a name: choose
-the output filename when saving. Stop and remove the old `nav` container
-before switching modes; there is no cross-process lock or overwrite guard.
+The physical workflow uses the existing `/scan` and local EKF
+`odom -> base_footprint` transform. Start the whole robot stack, including
+the `nav` service:
+
+```bash
+docker compose -f Docker/enexis_go2/docker-compose.yml up -d
+```
+
+### Modes
+
+The `nav` service runs the `nav_mode_manager` node, which runs exactly one
+mode at a time:
+
+- **Idle**: nothing runs and nothing publishes `map -> odom`.
+- **Mapping**: SLAM Toolbox (online async) with a new, empty map every time.
+  Nav2 does not run.
+- **Localization**: Nav2 Map Server, AMCL, and Nav2 with a static global
+  costmap layer on a saved map.
+
+At boot, the manager starts localization on `/maps/default.yaml` if it
+exists. Otherwise it stays idle and reports
+`No default map (/maps/default.yaml); choose a mode`. To load a map at boot,
+save it as `/maps/default` (see [Mapping](#mapping)).
+
+Switch modes with the **Go2 Nav Mode** panel in laptop RViz:
+
+1. Choose **Idle**, **Mapping**, or **Localization**.
+2. For localization, pick a saved map from the drop-down. **Refresh** reloads
+   the list from the robot.
+3. Press **Apply**.
+
+The panel shows the robot's mode, map, state (`switching`,
+`waiting_for_pose`, `ready`, or `failed`), and message, plus the reply to the
+last request, such as a refusal. **Apply** is disabled while a switch is in
+progress, but enabled while localization waits for the initial pose. A switch
+stops the current mode cleanly before starting the new one, so two modes
+never publish `map -> odom` together. Expect a switch to take about 10-15 s
+on the Jetson.
+
+Without RViz, use the services from a ROS shell. On the Jetson, open the
+shell in the `nav` container; on the laptop, the `tools` container
+(see [Laptop operator tools](#laptop-operator-tools)) also works:
+
+```bash
+docker compose -f Docker/enexis_go2/docker-compose.yml exec nav bash
+ros2 topic echo /nav_mode/status
+ros2 service call /nav_mode/list_maps go2_nav_interfaces/srv/ListMaps
+ros2 service call /nav_mode/set_mode go2_nav_interfaces/srv/SetNavMode \
+  "{mode: localization, map_name: office}"
+ros2 service call /nav_mode/set_mode go2_nav_interfaces/srv/SetNavMode \
+  "{mode: mapping}"
+ros2 service call /nav_mode/set_mode go2_nav_interfaces/srv/SetNavMode \
+  "{mode: idle}"
+```
+
+A response with `success: true` only means the request was accepted. Follow
+the progress on `/nav_mode/status`. The manager refuses a request, with
+`success: false` and the reason, in these cases:
+
+- The mode is unknown.
+- The map does not exist. Map names (without `.yaml`) may only use ASCII
+  letters, digits, `_`, and `-`.
+- Another switch is still in progress.
+- A Nav2 goal is active (`Cancel the active navigation goal first`). Cancel
+  it, for example in the Nav2 panel, and let the robot stop first.
+
+If a mode fails to start, the manager stops everything it started, returns
+to Idle, and reports state `failed` with the reason. This happens on a launch
+error, when a step is not ready within `ready_timeout` (60 s by default; the
+wait for the initial pose has no limit), or when its processes exit
+unexpectedly at any time. A mode is never left half-started. Idle is always
+available as a safe fallback. Stopping the `nav` container stops the active
+mode cleanly first.
 
 ### Mapping
 
-With the robot stationary, start mapping mode:
-
-```bash
-NAV_MODE=mapping \
-  docker compose -f Docker/enexis_go2/docker-compose.yml \
-  --profile navigation up -d nav
-```
-
-Mapping runs asynchronous SLAM Toolbox, which publishes the `map -> odom`
-transform. Manually drive the robot to map the environment. Nav2 is not started
-in mapping mode, and no autonomous goals are sent. Stop the robot and allow
-the map to settle before saving.
+Mapping always starts a new, empty map. With the robot stationary, select
+**Mapping** and press **Apply**. Mapping runs asynchronous SLAM Toolbox,
+which publishes the `map -> odom` transform. Manually drive the robot to map
+the environment. Nav2 is not started in mapping mode, and no autonomous goals
+are sent. Stop the robot and allow the map to settle before saving.
 
 Use the standard **SlamToolboxPlugin** RViz panel's **Save Map** control for
 the occupancy map and **Serialize Map** for the pose graph. These are
 **separate operations**: an occupancy map (`.yaml` and `.pgm`) is used by
 AMCL/Nav2, whereas a serialized graph (`.posegraph` and `.data`) is needed
-to resume SLAM. Saving one does not save the other.
+to resume SLAM. Saving one does not save the other. Only maps with a `.yaml`
+file appear in the Go2 Nav Mode drop-down.
 
 Enter an absolute, extension-free robot-container path such as
-`/maps/warehouse` in the panel's corresponding filename field. Even when
-RViz runs on the laptop, files are written by SLAM Toolbox on the robot,
-not into the laptop filesystem. `/maps` is the persistent host mount.
-Alternatively, call the standard services directly from the Jetson:
+`/maps/warehouse` in the panel's corresponding filename field. Use
+`/maps/default` for the map to load at boot. Even when RViz runs on the
+laptop, files are written by SLAM Toolbox on the robot, not into the laptop
+filesystem. `/maps` is the persistent host mount. Alternatively, call the
+standard services from a ROS shell in the `nav` container:
 
 ```bash
-docker compose -f Docker/enexis_go2/docker-compose.yml \
-  --profile navigation exec nav ros2 service call \
-  /slam_toolbox/save_map slam_toolbox/srv/SaveMap \
+docker compose -f Docker/enexis_go2/docker-compose.yml exec nav bash
+ros2 service call /slam_toolbox/save_map slam_toolbox/srv/SaveMap \
   "{name: {data: '/maps/warehouse'}}"
-docker compose -f Docker/enexis_go2/docker-compose.yml \
-  --profile navigation exec nav ros2 service call \
-  /slam_toolbox/serialize_map slam_toolbox/srv/SerializePoseGraph \
-  "{filename: '/maps/warehouse'}"
+ros2 service call /slam_toolbox/serialize_map \
+  slam_toolbox/srv/SerializePoseGraph "{filename: '/maps/warehouse'}"
 ```
 
 Check each response for `result: 0` (success) and confirm that all four files
@@ -321,18 +372,15 @@ not assume the other operation succeeded or that a partial save was rolled back.
 
 ### Resume mapping from a pose graph
 
-Start mapping mode after stopping/removing any old `nav` container. Use the
+Switch to **Mapping**, which starts an empty map. Then use the SLAM Toolbox
 panel's **Deserialize Map** control with the saved graph prefix and a
-supported start mode, or call the standard service below with the
-operator-known robot pose in the saved map's `map` frame:
+supported start mode. Alternatively, call the standard service from a ROS
+shell in the `nav` container with the operator-known robot pose in the saved
+map's `map` frame:
 
 ```bash
-NAV_MODE=mapping \
-  docker compose -f Docker/enexis_go2/docker-compose.yml \
-  --profile navigation up -d nav
-docker compose -f Docker/enexis_go2/docker-compose.yml \
-  --profile navigation exec nav ros2 service call \
-  /slam_toolbox/deserialize_map slam_toolbox/srv/DeserializePoseGraph \
+ros2 service call /slam_toolbox/deserialize_map \
+  slam_toolbox/srv/DeserializePoseGraph \
   "{filename: '/maps/warehouse', match_type: 2, initial_pose: {x: 1.2, y: -0.4, theta: 1.57}}"
 ```
 
@@ -354,34 +402,35 @@ unused prefix such as `/maps/warehouse-extension`.
 
 ### Localization and Nav2
 
-Cancel any active goal and stop the robot before switching modes. Stop and
-remove the old navigation container before starting the other mode; this
-prevents two processes from publishing `map -> odom` at once. Localization
-requires an existing, explicitly named `/maps/<MAP_NAME>.yaml` map and its
-referenced image (normally saved next to it). The launch checks the basename
-and YAML existence; Map Server validates and loads its contents:
+Cancel any active goal and stop the robot before switching modes.
+Localization requires an existing `/maps/<name>.yaml` map and its referenced
+image (normally saved next to it). The manager checks the name and YAML
+existence; Map Server validates and loads its contents. A broken map fails
+the switch, and the robot returns to Idle.
 
-```bash
-docker compose -f Docker/enexis_go2/docker-compose.yml \
-  --profile navigation stop nav
-docker compose -f Docker/enexis_go2/docker-compose.yml \
-  --profile navigation rm -f nav
-NAV_MODE=localization MAP_NAME=warehouse \
-  docker compose -f Docker/enexis_go2/docker-compose.yml \
-  --profile navigation up -d nav
-```
+Select **Localization**, choose the map, and press **Apply**. Localization
+starts in two steps:
 
-Localization starts Nav2 Map Server, AMCL, and Nav2 with a static global
-costmap layer. AMCL alone publishes `map -> odom`; the local EKF continues to
-publish `odom -> base_footprint`. In laptop RViz, use **2D Pose Estimate** to
-set the robot's initial pose in the map, then use **2D Goal Pose** only when
-ready to navigate. Startup never dispatches or replays a goal automatically.
-Mapping remains manual-drive only.
+1. The manager starts Map Server and AMCL. When both are active, the state
+   becomes `waiting_for_pose` and the panel shows
+   **Waiting for initial pose (2D Pose Estimate)**. There is no time limit,
+   also not for the boot default map.
+2. In laptop RViz, use **2D Pose Estimate** to set the robot's pose in the
+   map. As soon as AMCL publishes this pose, it also publishes
+   `map -> odom`, and the manager starts Nav2. The state becomes `ready` when
+   all Nav2 servers are active (within `ready_timeout`).
 
-To switch back to mapping, first stop and remove `nav` as above, then start it
-with `NAV_MODE=mapping` (no `MAP_NAME` needed). Do not start both modes
-simultaneously. The simulation Compose file and its default Nav2 launch/config
-remain unchanged.
+While waiting for the pose, you can still select another mode or map; the
+manager stops Map Server and AMCL cleanly first. A broken map file is only
+detected after `ready_timeout`, because Map Server keeps running in an error
+state instead of exiting.
+
+State `ready` means Map Server, AMCL, and all Nav2 servers are active. AMCL
+alone publishes `map -> odom`; the local EKF continues to publish
+`odom -> base_footprint`. Use **2D Goal Pose** only when ready to navigate.
+Startup never dispatches or replays a goal automatically. Mapping remains
+manual-drive only. The simulation Compose file and its default Nav2
+launch/config remain unchanged.
 
 ## Main Launch Files
 
@@ -389,7 +438,13 @@ The `nav2` package's `nav2.launch.py` forwards `use_sim_time` to Nav2.
 Simulation Compose continues to use its existing default navigation launch
 and rolling costmap. Physical mapping and localization use
 `go2_navigation.launch.py` with an explicit mode and a map-name argument only
-for localization. Mapping includes the upstream SLAM Toolbox online async
+for localization. `start_navigation:=false` (default `true`) starts only Map
+Server and AMCL in localization mode. The `nav` service's
+`nav_mode_manager.py` (installed by the `nav2` package; interfaces in
+`go2_nav_interfaces`) runs this launch file with `start_navigation:=false`
+and, after the initial pose, `nav2.launch.py` as separate child processes.
+To launch them by hand for debugging, stop the `nav` service first so that
+only one mode runs. Mapping includes the upstream SLAM Toolbox online async
 launch; saving and resuming use its standard services and RViz panel.
 The static-layer plugin is present but disabled in the default rolling-costmap
 configuration; only physical localization enables it.
@@ -403,6 +458,17 @@ AMCL activation, Nav2 lifecycle activation, and the static global costmap.
 Run it only in a `docker run --rm --network none` container with the updated
 `nav2` package built and sourced and an isolated `ROS_DOMAIN_ID`; it publishes
 synthetic sensor data and TF, never navigation goals.
+
+The companion harness
+`robotics_modules/ros2_control/nav2/test/integration_nav_mode_manager.py`
+runs the same way (with `go2_nav_interfaces` also built and sourced) and drives
+the installed mode manager: boot without and with a default map, switching
+between mapping and localization, the two-step localization (waiting for the
+initial pose, then Nav2), switching away while waiting, refusals (including a
+synthetic active-goal status), failure of a broken map or crashed launch back
+to Idle, and clean shutdown without leftover processes. Unit tests for the
+manager's validation, map listing, pose freshness check, and process-group
+shutdown run with `colcon test` on `nav2`.
 
 All robot nodes (platform, Livox, localization, Nav2) start with `--log-level rmw_cyclonedds_cpp:=error`.
 This hides the "Failed to parse type hash" warnings for Unitree DDS topics, but also every other Cyclone DDS warning.

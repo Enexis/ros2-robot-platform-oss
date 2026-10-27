@@ -42,6 +42,7 @@ COPY robotics_modules/sensors/sim_gnss /$WORKDIR/src/sim_gnss
 COPY robotics_modules/sensors/sim_lidar /$WORKDIR/src/sim_lidar
 COPY robotics_modules/sensors/septentrio /$WORKDIR/src/septentrio
 COPY robotics_modules/sensors/livox /$WORKDIR/src/livox
+COPY robotics_modules/ros2_control/go2_nav_interfaces /$WORKDIR/src/go2_nav_interfaces
 RUN . /opt/ros/${ROS_DISTRO}/setup.sh && \
     colcon build --cmake-args -DDISTRO_ROS=${ROS_DISTRO}
 
