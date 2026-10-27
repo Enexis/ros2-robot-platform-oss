@@ -50,12 +50,8 @@ def active(node, name):
     return call(node, GetState, f'/{name}/get_state', GetState.Request()).current_state.id == 3
 
 
-def main():
-    directory = Path(sys.argv[1]).resolve()
-    directory.mkdir(parents=True, exist_ok=True)
-    assert not list(directory.iterdir()), 'Use an empty test directory'
-    rclpy.init()
-    node = rclpy.create_node('synthetic_go2_fixture')
+def start_synthetic_sensors(node):
+    """Publish synthetic /scan, /odometry/local and odom TF from a static room."""
     broadcaster = TransformBroadcaster(node)
     static = StaticTransformBroadcaster(node)
     sensor = TransformStamped()
@@ -66,16 +62,6 @@ def main():
     static.sendTransform(sensor)
     scan_pub = node.create_publisher(LaserScan, '/scan', qos_profile_sensor_data)
     odom_pub = node.create_publisher(Odometry, '/odometry/local', 10)
-    maps = []
-    costs = []
-    poses = []
-    commands = []
-    transient = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
-    node.create_subscription(OccupancyGrid, '/map', maps.append, transient)
-    node.create_subscription(OccupancyGrid, '/global_costmap/costmap', costs.append, transient)
-    node.create_subscription(PoseWithCovarianceStamped, '/amcl_pose', poses.append, 10)
-    node.create_subscription(Twist, '/cmd_vel', commands.append, 10)
-    initial_pub = node.create_publisher(PoseWithCovarianceStamped, '/initialpose', 10)
 
     def publish():
         stamp = node.get_clock().now().to_msg()
@@ -114,6 +100,25 @@ def main():
         scan_pub.publish(scan)
 
     node.create_timer(0.1, publish)
+
+
+def main():
+    directory = Path(sys.argv[1]).resolve()
+    directory.mkdir(parents=True, exist_ok=True)
+    assert not list(directory.iterdir()), 'Use an empty test directory'
+    rclpy.init()
+    node = rclpy.create_node('synthetic_go2_fixture')
+    start_synthetic_sensors(node)
+    maps = []
+    costs = []
+    poses = []
+    commands = []
+    transient = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+    node.create_subscription(OccupancyGrid, '/map', maps.append, transient)
+    node.create_subscription(OccupancyGrid, '/global_costmap/costmap', costs.append, transient)
+    node.create_subscription(PoseWithCovarianceStamped, '/amcl_pose', poses.append, 10)
+    node.create_subscription(Twist, '/cmd_vel', commands.append, 10)
+    initial_pub = node.create_publisher(PoseWithCovarianceStamped, '/initialpose', 10)
     processes = []
     logs = []
 

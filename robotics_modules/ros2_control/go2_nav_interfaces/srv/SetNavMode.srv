@@ -1,0 +1,12 @@
+string IDLE="idle"
+string MAPPING="mapping"
+string LOCALIZATION="localization"
+
+# One of IDLE, MAPPING or LOCALIZATION.
+string mode
+# Saved map basename in the maps directory; required only for LOCALIZATION.
+string map_name
+---
+# True when the switch was accepted; progress is reported on /nav_mode/status.
+bool success
+string message

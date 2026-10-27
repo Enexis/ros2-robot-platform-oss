@@ -8,4 +8,5 @@
 !robotics_modules/sensors/livox
 !robotics_modules/ros2_control/localization
 !robotics_modules/ros2_control/nav2
+!robotics_modules/ros2_control/go2_nav_interfaces
 **/__pycache__

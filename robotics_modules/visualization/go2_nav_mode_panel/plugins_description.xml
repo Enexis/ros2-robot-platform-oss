@@ -1,0 +1,8 @@
+<library path="go2_nav_mode_panel">
+  <class
+    name="go2_nav_mode_panel/Go2 Nav Mode"
+    type="go2_nav_mode_panel::NavModePanel"
+    base_class_type="rviz_common::Panel">
+    <description>Switch the Go2 between idle, mapping and saved-map localization.</description>
+  </class>
+</library>

@@ -39,6 +39,8 @@ Panels:
     Name: SLAM Toolbox
   - Class: nav2_rviz_plugins/Navigation 2
     Name: Navigation 2
+  - Class: go2_nav_mode_panel/Go2 Nav Mode
+    Name: Go2 Nav Mode
 Visualization Manager:
   Class: ""
   Displays:

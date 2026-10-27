@@ -1,0 +1,3 @@
+---
+# Basenames (without .yaml) of the saved maps, sorted.
+string[] map_names

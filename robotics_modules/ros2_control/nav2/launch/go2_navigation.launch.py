@@ -20,6 +20,7 @@ def launch_setup(context):
     map_name = LaunchConfiguration("map_name").perform(context)
     maps_dir = LaunchConfiguration("maps_dir").perform(context)
     use_sim_time = LaunchConfiguration("use_sim_time").perform(context).lower()
+    start_navigation = LaunchConfiguration("start_navigation").perform(context).lower()
 
     if mode not in ("mapping", "localization"):
         raise RuntimeError("mode must be explicitly set to mapping or localization")
@@ -27,6 +28,8 @@ def launch_setup(context):
         raise RuntimeError("use_sim_time must be true or false")
     if use_sim_time != "false":
         raise RuntimeError("physical Go2 mapping and localization require use_sim_time:=False")
+    if start_navigation not in ("true", "false"):
+        raise RuntimeError("start_navigation must be true or false")
 
     nav2_share = Path(get_package_share_directory("nav2"))
 
@@ -93,6 +96,8 @@ def launch_setup(context):
             "static_map": "true",
         }.items(),
     )
+    if start_navigation == "false":
+        return [localization_launch]
     return [localization_launch, navigation_launch]
 
 
@@ -118,6 +123,14 @@ def generate_launch_description():
                 "use_sim_time",
                 default_value="False",
                 description="Physical Go2 modes require wall-clock time.",
+            ),
+            DeclareLaunchArgument(
+                "start_navigation",
+                default_value="true",
+                description=(
+                    "Localization only: also start Nav2. Set false to start only Map Server "
+                    "and AMCL, then nav2.launch.py static_map:=true after the initial pose."
+                ),
             ),
             OpaqueFunction(function=launch_setup),
         ]

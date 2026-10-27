@@ -29,19 +29,18 @@ services:
   
   nav:
     image: enexis/go2:latest
-    profiles: ["navigation"]
     extends:
       service: common
       file: ../docker-compose.common.yml
-    environment:
-      NAV_MODE: ${NAV_MODE:-}
-      MAP_NAME: ${MAP_NAME:-}
     volumes:
       - ${GO2_MAPS_DIR:-${HOME}/go2_maps}:/maps
+    # The mode manager stops its launch tree with SIGINT for up to 15 s, then escalates.
+    stop_grace_period: 40s
     command:
       - /bin/bash 
       - -c
-      - exec ros2 launch nav2 go2_navigation.launch.py mode:="$$NAV_MODE" $${MAP_NAME:+"map_name:=$$MAP_NAME"} maps_dir:=/maps use_sim_time:=False > >(grep --line-buffered -v 'Failed to parse type hash') 2>&1
+      # Exec the script directly (not via `ros2 run`) so it is PID 1 and receives SIGTERM.
+      - exec "$$(ros2 pkg prefix nav2)/lib/nav2/nav_mode_manager.py" --ros-args -p maps_dir:=/maps --log-level rmw_cyclonedds_cpp:=error > >(grep --line-buffered -v 'Failed to parse type hash') 2>&1
   
   livox:
     image: enexis/go2:latest
