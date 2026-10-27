@@ -3,6 +3,9 @@
 <robot name="go2" xmlns:xacro="http://www.ros.org/wiki/xacro">
 
     <xacro:arg name="DEBUG" default="false"/>
+    <!-- On hardware, imu_tilt_tf.py publishes base_footprint -> base_link with
+         the body roll and pitch from the IMU, so the URDF must not. -->
+    <xacro:arg name="imu_tilt" default="false"/>
 
     <xacro:include filename="$(find go2_description)/xacro/constants.xacro"/>
     <xacro:include filename="$(find go2_description)/xacro/materials.xacro"/>
@@ -27,14 +30,16 @@
         <!-- No inertia, no mass - this is just a reference frame -->
     </link>
 
-     <link name="base_footprint">
-        <!-- No inertia, no mass - this is just a reference frame -->
-    </link>
-    <joint name="base_to_footprint" type="fixed">
-        <origin rpy="0 0 0" xyz="0 0 0"/>
-        <parent link="base_footprint"/>
-        <child link="base_link"/>
-    </joint>
+    <xacro:unless value="$(arg imu_tilt)">
+        <link name="base_footprint">
+            <!-- No inertia, no mass - this is just a reference frame -->
+        </link>
+        <joint name="base_to_footprint" type="fixed">
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <parent link="base_footprint"/>
+            <child link="base_link"/>
+        </joint>
+    </xacro:unless>
 
     <!-- 
         Fixed joint connecting base_link to the actual robot body (trunk).
