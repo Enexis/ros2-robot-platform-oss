@@ -22,6 +22,24 @@ def launch_setup(context: LaunchContext) -> list:
     ekf_local_config = LaunchConfiguration("ekf_local_config")
     ekf_global_config = LaunchConfiguration("ekf_global_config")
     navsat_config = LaunchConfiguration("navsat_config")
+    livox_gyro = LaunchConfiguration("livox_gyro").perform(context).lower() in ("true", "1")
+
+    ekf_local_overrides = {"use_sim_time": LaunchConfiguration("use_sim_time")}
+    if livox_gyro:
+        # Yaw rate from the Livox gyro (offset removed). Its TF to base_footprint
+        # includes the IMU-driven body tilt, so wait briefly for that transform.
+        ekf_local_overrides.update({"imu0": "livox/imu_corrected", "transform_timeout": 0.05})
+
+    gyro_bias_correction = Node(
+        package="localization",
+        executable="gyro_bias_correction.py",
+        name="gyro_bias_correction",
+        namespace=namespace,
+        output="screen",
+        remappings=[("imu_in", "livox/imu"), ("imu_out", "livox/imu_corrected")],
+        ros_arguments=["--log-level", "rmw_cyclonedds_cpp:=error"],
+        condition=IfCondition(str(livox_gyro)),
+    )
 
     ekf_local = Node(
         package="robot_localization",
@@ -30,7 +48,7 @@ def launch_setup(context: LaunchContext) -> list:
         namespace=namespace,
         parameters=[
             ekf_local_config,
-            {"use_sim_time": LaunchConfiguration("use_sim_time")},
+            ekf_local_overrides,
         ],
         remappings=[("odometry/filtered", "odometry/local")],
         ros_arguments=["--log-level", "rmw_cyclonedds_cpp:=error"],
@@ -72,7 +90,7 @@ def launch_setup(context: LaunchContext) -> list:
         condition=IfCondition(LaunchConfiguration("start_navsat_transform")),
     )
 
-    return [ekf_local, ekf_global, navsat_transform]
+    return [gyro_bias_correction, ekf_local, ekf_global, navsat_transform]
 
 
 def generate_launch_description() -> LaunchDescription:
@@ -124,6 +142,11 @@ def generate_launch_description() -> LaunchDescription:
         default_value="True",
         description="Start navsat transform node",
     )
+    declare_livox_gyro_cmd = DeclareLaunchArgument(
+        "livox_gyro",
+        default_value="False",
+        description="Local EKF yaw rate from the Livox gyro (offset-corrected) instead of /imu",
+    )
 
     return LaunchDescription(
         [
@@ -135,6 +158,7 @@ def generate_launch_description() -> LaunchDescription:
             declare_start_ekf_local_cmd,
             declare_start_ekf_global_cmd,
             declare_start_navsat_transform_cmd,
+            declare_livox_gyro_cmd,
             OpaqueFunction(function=launch_setup),
         ]
     )
