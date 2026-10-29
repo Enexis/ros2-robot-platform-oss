@@ -61,7 +61,39 @@ def launch_setup(context: LaunchContext) -> list:
         condition=IfCondition(LaunchConfiguration("rviz").perform(context)),
     )
 
-    return [robot_description_cmd, rviz_cmd]
+    livox_cmd = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("livox"), "launch", "livox_mid360s.launch.py"
+            )
+        ),
+        launch_arguments={
+            "frame_id": "lidar_link",
+        }.items(),
+        condition=IfCondition(LaunchConfiguration("livox").perform(context)),
+    )
+
+    pc_to_scan_node = Node(
+        package="pointcloud_to_laserscan",
+        executable="pointcloud_to_laserscan_node",
+        name="livox_pc2l_scan",
+        output="screen",
+        parameters=[{
+            "target_frame": "lidar_link",
+            "transform_tolerance": 0.01,
+            "min_height": -0.1,
+            "max_height": 0.2,
+            "angle_min": -3.14159,
+            "angle_max": 3.14159,
+            "scan_time": 0.05,
+            "range_min": 0.1,
+            "range_max": 30.0,
+        }],
+        remappings=[("cloud_in", "livox/lidar"), ("scan", "scan")],
+        condition=IfCondition(LaunchConfiguration("livox").perform(context)),
+    )
+
+    return [robot_description_cmd, rviz_cmd, livox_cmd, pc_to_scan_node]
 
 
 def generate_launch_description() -> LaunchDescription:
@@ -101,6 +133,14 @@ def generate_launch_description() -> LaunchDescription:
             "rviz",
             default_value="False",
             description="Launch rviz.",
+        )
+    )
+
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "livox",
+            default_value="False",
+            description="Launch Livox MID360s driver.",
         )
     )
 
