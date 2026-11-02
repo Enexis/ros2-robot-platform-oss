@@ -15,7 +15,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
 
 import os
-
+import yaml
 
 def launch_setup(context: LaunchContext) -> list:
     """The launch setup.
@@ -31,6 +31,12 @@ def launch_setup(context: LaunchContext) -> list:
         get_package_share_directory("enexis_go2"), "xacro", "enexis_go2.xacro"
     )
 
+    # On hardware, imu_tilt_tf publishes base_footprint -> base_link from the IMU.
+    hardware = LaunchConfiguration("use_sim_time").perform(context).lower() not in ("true", "1")
+    xacro_args = yaml.safe_load(LaunchConfiguration("xacro_arguments").perform(context)) or {}
+    if hardware:
+        xacro_args.setdefault("imu_tilt", "true")
+
     robot_description_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(
@@ -41,9 +47,18 @@ def launch_setup(context: LaunchContext) -> list:
             "namespace": LaunchConfiguration("namespace"),
             "use_sim_time": LaunchConfiguration("use_sim_time"),
             "xacro_file": xacro_file,
-            "xacro_arguments": LaunchConfiguration("xacro_arguments"),
+            "xacro_arguments": yaml.safe_dump(xacro_args, default_flow_style=True).strip(),
             "rviz": "False",
         }.items(),
+    )
+
+    imu_tilt_node = Node(
+        package="enexis_go2",
+        executable="imu_tilt_tf.py",
+        name="imu_tilt_tf",
+        output="screen",
+        ros_arguments=["--log-level", "rmw_cyclonedds_cpp:=error"],
+        condition=IfCondition(str(hardware)),
     )
 
     rviz_cmd = Node(
@@ -70,9 +85,10 @@ def launch_setup(context: LaunchContext) -> list:
         parameters=[{
             "target_frame": "base_footprint",
             "transform_tolerance": 0.1,
-            # base_footprint sits at body height, ~0.30 m above the ground
-            # when standing, so this keeps points 0.05-0.45 m above the ground.
-            "min_height": -0.25,
+            # base_footprint is level and at body height, ~0.30 m above the
+            # ground when standing, so this keeps points 0.08-0.45 m above the
+            # ground. Body tilt is in TF via imu_tilt_tf.
+            "min_height": -0.22,
             "max_height": 0.15,
             "angle_min": -3.14159,
             "angle_max": 3.14159,
@@ -98,8 +114,8 @@ def launch_setup(context: LaunchContext) -> list:
                 "type": "laser_filters/LaserScanBoxFilter",
                 "params": {
                     # /scan lies in the base_footprint plane, 0.12 m
-                    # below the lidar, so the box is tall in z. The 17 deg
-                    # lidar pitch shifts those points ~3.5 cm forward in
+                    # below the lidar, so the box is tall in z. The ~18.5 deg
+                    # lidar pitch shifts those points ~4 cm forward in
                     # lidar_link. The mount shows up at about +-45 deg and up to
                     # 16 cm from the lidar, so the box covers ~16 cm ahead and
                     # 15 cm to each side.
@@ -118,7 +134,7 @@ def launch_setup(context: LaunchContext) -> list:
         condition=UnlessCondition(LaunchConfiguration("use_sim_time")),
     )
 
-    return [robot_description_cmd, rviz_cmd, pc_to_scan_node, scan_filter_node]
+    return [robot_description_cmd, imu_tilt_node, rviz_cmd, pc_to_scan_node, scan_filter_node]
 
 
 def generate_launch_description() -> LaunchDescription:
