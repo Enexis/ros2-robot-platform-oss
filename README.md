@@ -92,6 +92,18 @@ This project is intended to be started with Docker Compose. The `ros2-go2` image
 - installs ROS package dependencies with `rosdep`
 - builds the workspace with `colcon`
 
+Both the robot image (`Docker/enexis_go2/Dockerfile`) and the dev image (`Docker/base_dev/Dockerfile`) use cached layers, so a rebuild only redoes what changed:
+
+| Change | What rebuilds |
+|---|---|
+| Launch/config files in `enexis_go2`, `nav2`, `localization` (dev image: also `gazebo`) | Only the last `colcon` layer (about 1 min on the Jetson) |
+| Source in `unitree_go2` or the sensor packages (dev image: also `geo_path_follower`) | Both `colcon` layers (a few minutes) |
+| Any `package.xml` | The `rosdep` dependency install and everything after it (about 30 min on the Jetson) |
+| Dev image only: files in `utilities/` | Only the final `utilities` copy and shell setup (seconds) |
+
+The Livox SDK and `livox_ros_driver2` are cloned in a cached layer. To get their latest upstream versions, build with `--no-cache`.
+Each Dockerfile has a `Dockerfile.dockerignore` that limits the files sent to the build.
+
 ### 1) Clone
 
 ```bash
