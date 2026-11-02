@@ -497,6 +497,29 @@ This hides the "Failed to parse type hash" warnings for Unitree DDS topics, but 
   from the lidar protection mount (box around `lidar_link`, about ±10 cm in the
   scan plane) and publishes `/scan`. In simulation, both nodes are
   disabled because Gazebo supplies `/scan`.
+- `/scan` keeps points 0.08–0.45 m above the ground: `min_height`/`max_height`
+  are −0.22/0.15 m in `base_footprint`, which is level and at body height
+  (~0.30 m when standing).
+- In hardware mode, node `/imu_tilt_tf` publishes `base_footprint -> base_link`
+  with the body roll and pitch from `/imu` (yaw removed). The URDF then leaves
+  out its fixed `base_footprint` joint (xacro argument `imu_tilt:=true`, set by
+  the platform launch). Without this, the ±5° body tilt while walking puts the
+  ground into `/scan` from about 1 m away. Simulation keeps the fixed joint.
+- The lidar mount pitch in `enexis_go2.xacro` is 18.5°. It was measured on the
+  robot (Livox IMU vs Go2 IMU, and the ground plane in the cloud); the drawing
+  value is 17°. If the ground shows up in `/scan` while standing still on a
+  flat floor, check this value first.
+- On hardware, the local EKF takes its yaw rate from the Livox gyro, not from
+  the Go2 `/imu` (`livox_gyro:=True` in `localization.launch.py`). Measured on
+  the robot, the Go2 gyro has a constant offset of 0.34°/s (the heading drifted
+  ~20°/min while standing still) and reads turns ~3% too large. Node
+  `/gyro_bias_correction` republishes `/livox/imu` as `/livox/imu_corrected`:
+  it learns the gyro offset whenever the robot stands still (low gyro noise and
+  no non-zero `/cmd_vel` for 1.5 s), subtracts it, and converts the Livox
+  acceleration from g to m/s². `livox_frame` (the Livox IMU frame) is attached
+  to `lidar_link` in `enexis_go2.xacro`. Simulation keeps `/imu`.
+- Turn slowly while mapping. A lidar frame takes 100 ms and is not deskewed, so
+  at 1.3 rad/s each frame is smeared over ~7.5°.
 
 ---
 
