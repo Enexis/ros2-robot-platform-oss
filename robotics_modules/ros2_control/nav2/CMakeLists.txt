@@ -16,6 +16,10 @@ install(DIRECTORY
   launch config
   DESTINATION share/${PROJECT_NAME}
 )
+install(PROGRAMS
+  scripts/nav_mode_manager.py
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -27,6 +31,9 @@ if(BUILD_TESTING)
   # a copyright and license is added to all source files
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
+
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(test_nav_mode_manager test/test_nav_mode_manager.py)
 endif()
 
 ament_package()
