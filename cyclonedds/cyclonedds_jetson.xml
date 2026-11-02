@@ -10,9 +10,8 @@
                 <NetworkInterface name="enP8p1s0" priority="default" multicast="default" />
             </Interfaces>
         </General>
-        <Tracing>
-            <Verbosity>finest</Verbosity>
-            <OutputFile>OutputFile</OutputFile>
-        </Tracing>
+        <Internal>
+            <SocketReceiveBufferSize min="10MB" />
+        </Internal>
     </Domain>
 </CycloneDDS>

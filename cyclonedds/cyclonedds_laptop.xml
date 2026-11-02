@@ -6,12 +6,8 @@
     <Domain>
         <General>
             <Interfaces>
-                <NetworkInterface name="enp0s1" priority="default" multicast="default" />
+                <NetworkInterface autodetermine="true" priority="default" multicast="default" />
             </Interfaces>
         </General>
-        <Tracing>
-            <Verbosity>finest</Verbosity>
-            <OutputFile>OutputFile</OutputFile>
-        </Tracing>
     </Domain>
 </CycloneDDS>

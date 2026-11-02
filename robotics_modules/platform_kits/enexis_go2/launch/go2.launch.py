@@ -4,7 +4,7 @@ from launch.actions import (
     IncludeLaunchDescription,
     OpaqueFunction,
 )
-from launch.conditions import IfCondition
+from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import (
     LaunchConfiguration,
     PythonExpression,
@@ -61,39 +61,64 @@ def launch_setup(context: LaunchContext) -> list:
         condition=IfCondition(LaunchConfiguration("rviz").perform(context)),
     )
 
-    livox_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(
-                get_package_share_directory("livox"), "launch", "livox_mid360s.launch.py"
-            )
-        ),
-        launch_arguments={
-            "frame_id": "lidar_link",
-        }.items(),
-        condition=IfCondition(LaunchConfiguration("livox").perform(context)),
-    )
-
     pc_to_scan_node = Node(
         package="pointcloud_to_laserscan",
         executable="pointcloud_to_laserscan_node",
         name="livox_pc2l_scan",
         output="screen",
+        ros_arguments=["--log-level", "rmw_cyclonedds_cpp:=error"],
         parameters=[{
-            "target_frame": "lidar_link",
-            "transform_tolerance": 0.01,
-            "min_height": -0.1,
-            "max_height": 0.2,
+            "target_frame": "base_footprint",
+            "transform_tolerance": 0.1,
+            # base_footprint sits at body height, ~0.30 m above the ground
+            # when standing, so this keeps points 0.05-0.45 m above the ground.
+            "min_height": -0.25,
+            "max_height": 0.15,
             "angle_min": -3.14159,
             "angle_max": 3.14159,
             "scan_time": 0.05,
-            "range_min": 0.1,
+            "range_min": 0.3,
             "range_max": 30.0,
         }],
-        remappings=[("cloud_in", "livox/lidar"), ("scan", "scan")],
-        condition=IfCondition(LaunchConfiguration("livox").perform(context)),
+        remappings=[("cloud_in", "livox/lidar"), ("scan", "scan_unfiltered")],
+        condition=UnlessCondition(LaunchConfiguration("use_sim_time")),
     )
 
-    return [robot_description_cmd, rviz_cmd, livox_cmd, pc_to_scan_node]
+    # Removes returns from the lidar protection mount (within ~7 cm of the
+    # lidar) so they do not show up as obstacles in the costmaps.
+    scan_filter_node = Node(
+        package="laser_filters",
+        executable="scan_to_scan_filter_chain",
+        name="livox_scan_filter",
+        output="screen",
+        ros_arguments=["--log-level", "rmw_cyclonedds_cpp:=error"],
+        parameters=[{
+            "filter1": {
+                "name": "lidar_mount_box",
+                "type": "laser_filters/LaserScanBoxFilter",
+                "params": {
+                    # /scan lies in the base_footprint plane, 0.12 m
+                    # below the lidar, so the box is tall in z. The 17 deg
+                    # lidar pitch shifts those points ~3.5 cm forward in
+                    # lidar_link. The mount shows up at about +-45 deg and up to
+                    # 16 cm from the lidar, so the box covers ~16 cm ahead and
+                    # 15 cm to each side.
+                    "box_frame": "lidar_link",
+                    "min_x": -0.06,
+                    "max_x": 0.19,
+                    "min_y": -0.15,
+                    "max_y": 0.15,
+                    "min_z": -0.5,
+                    "max_z": 0.5,
+                    "invert": False,
+                },
+            },
+        }],
+        remappings=[("scan", "scan_unfiltered"), ("scan_filtered", "scan")],
+        condition=UnlessCondition(LaunchConfiguration("use_sim_time")),
+    )
+
+    return [robot_description_cmd, rviz_cmd, pc_to_scan_node, scan_filter_node]
 
 
 def generate_launch_description() -> LaunchDescription:
@@ -133,14 +158,6 @@ def generate_launch_description() -> LaunchDescription:
             "rviz",
             default_value="False",
             description="Launch rviz.",
-        )
-    )
-
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            "livox",
-            default_value="False",
-            description="Launch Livox MID360s driver.",
         )
     )
 

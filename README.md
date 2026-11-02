@@ -117,7 +117,25 @@ For Jetson, set interface names in `cyclonedds/cyclonedds_jetson.xml` to match t
 - `en*` = Ethernet interface connected to the Unitree Go2 embedded computer
 - `wl*` = wireless interface on the Jetson
 
-For laptop usage, set the interface names in `cyclonedds/cyclonedds_laptop.xml` to match your host network adapters.
+`cyclonedds_jetson.xml` requests a 10 MB DDS socket receive buffer, so large
+messages such as `/livox/lidar` (about 0.5 MB) are not lost in fragments. Allow
+this once on the Jetson host before you start the containers; otherwise every
+ROS node fails with `failed to increase socket receive buffer size`:
+
+```bash
+sudo tee /etc/sysctl.d/10-cyclone-max.conf <<'EOF'
+net.core.rmem_max=2147483647
+net.ipv4.ipfrag_time=3
+net.ipv4.ipfrag_high_thresh=134217728
+EOF
+sudo sysctl --system
+```
+
+For laptop usage, `cyclonedds/cyclonedds_laptop.xml` automatically selects a network
+adapter when each ROS process starts. Restart the laptop containers after changing
+network connections. With multiple active adapters, Cyclone DDS can select a
+network that does not reach the robot. In that case, replace `autodetermine="true"`
+with `name="<robot-network-interface>"` in the laptop profile.
 
 ### 3) Build image and start container
 
@@ -144,11 +162,73 @@ Notes:
 
 ---
 
+## Laptop operator tools
+
+Use this setup to visualize and command the real robot from a laptop without
+starting duplicate hardware drivers, localization, navigation, or Gazebo.
+The onboard robot stack must run separately. Stop any simulation or hardware
+stack running on the laptop before connecting to the robot.
+
+Select the laptop DDS configuration in `Docker/.env`. The laptop profile selects
+an adapter automatically; if it selects the wrong network, set an explicit
+interface name as described in Quick Start step 2. DDS discovery
+and traffic must be permitted between the machines. Match the robot's
+`ROS_DOMAIN_ID` (default `0`); export it in the host terminal before starting
+this stack if the robot uses a different domain.
+
+From the repository root, start RViz and the tools container:
+
+```bash
+docker compose -f Docker/enexis_go2/docker-laptop-compose.yml up -d
+```
+
+Both services use the existing `enexis/dev:latest` image. If needed, build it
+first with `docker compose -f Docker/base_dev/docker-compose.yml build enexis-dev`.
+RViz uses real time and the configuration baked into the image, not a source
+volume. The stack has its own Compose project name, `enexis_laptop`.
+
+Open a ROS tools shell and verify discovery:
+
+```bash
+docker compose -f Docker/enexis_go2/docker-laptop-compose.yml exec tools bash
+ros2 node list
+ros2 topic list
+```
+
+For keyboard control, run this inside the tools shell:
+
+```bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard \
+  --ros-args -p speed:=0.2 -p turn:=0.5
+```
+
+Teleop publishes `geometry_msgs/Twist` on `/cmd_vel` by default. Confirm this
+matches the robot's command topic before use. Keep the terminal focused:
+`i` moves forward, `,` backward, `j`/`l` turn, and `k` stops.
+Press `k` before exiting with `Ctrl+C`. Do not run keyboard control concurrently
+with navigation goals or other velocity command publishers. Teleop does not
+start automatically.
+
+RViz can send goals with its 2D Goal Pose tool when onboard navigation and
+localization are operational. To stop the laptop services:
+
+```bash
+docker compose -f Docker/enexis_go2/docker-laptop-compose.yml down
+```
+
 ## Main Launch Files
+
+The `nav2` package's `nav2.launch.py` forwards `use_sim_time` to Nav2.
+Hardware Compose sets it to `False`; simulation Compose sets it to `True`.
+Direct launches default to `True`, so pass `use_sim_time:=False` on hardware.
+Simulated time requires an active `/clock` publisher for costmap updates.
+
+All robot nodes (platform, Livox, localization, Nav2) start with `--log-level rmw_cyclonedds_cpp:=error`.
+This hides the "Failed to parse type hash" warnings for Unitree DDS topics, but also every other Cyclone DDS warning.
 
 - `go2_bringup/launch/go2.launch.py`
 	- launches `go2_description`, `go2_driver`, optional `go2_rviz`
-  - args: `rviz` (`True/False`), `livox` (`True/False`), `lidar` and `realsense` (reserved)
+  - args: `namespace`, `rviz`
 - `go2_description/launch/robot.launch.py`
 	- publishes `robot_state_publisher` from URDF/Xacro
 - `go2_driver/launch/go2_driver.launch.py`
@@ -163,6 +243,13 @@ Notes:
 - default cloud topic is `livox/lidar` (native Livox topic)
 - update Livox network settings in `robotics_modules/sensors/livox/config/MID360s_config.json`
 - Docker service: `Docker/enexis_go2/docker-compose.yml` -> `livox`
+- The platform launch does not start the Livox driver; the separate Docker
+  service owns it. In hardware mode (`use_sim_time:=False`), the platform launch
+  converts `/livox/lidar` to `/scan_unfiltered` with node `/livox_pc2l_scan`.
+  Node `/livox_scan_filter` (`laser_filters` box filter) then removes the returns
+  from the lidar protection mount (box around `lidar_link`, about ±10 cm in the
+  scan plane) and publishes `/scan`. In simulation, both nodes are
+  disabled because Gazebo supplies `/scan`.
 
 ---
 
@@ -228,6 +315,12 @@ For day-to-day development inside the container, this workspace uses short alias
 - Check `CYCLONEDDS_URI` points to a valid XML file.
 - Verify XML network interface names match actual interfaces.
 - Open UDP ports used by DDS discovery (commonly in `7400-7600` range).
+
+### `/scan` stops while `/livox/lidar` still publishes
+
+The converter drops a point cloud when one of its UDP fragments is lost. Check
+`awk '/^Udp:/{getline; print $6}' /proc/net/snmp` (UDP `RcvbufErrors`) twice;
+if it increases, apply the Jetson sysctl settings from Quick Start step 2.
 
 Windows firewall example (PowerShell as Administrator):
 
